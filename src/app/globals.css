@@ -1,0 +1,58 @@
+@import "tailwindcss";
+
+:root {
+  --primary: #0f766e;
+  --primary-hover: #115e59;
+  --primary-soft: #e6f4f1;
+  --accent: #0e7490;
+  --accent-soft: #e8f5f8;
+
+  --background: #f3f6fa;
+  --surface: #ffffff;
+  --border: #e2e8f0;
+  --foreground: #17212b;
+  --muted: #64748b;
+
+  --success: #16834a;
+  --success-soft: #e8f6ee;
+  --danger: #c2413b;
+  --danger-soft: #fff0ef;
+  --warning: #b7791f;
+
+  --sidebar-width: 272px;
+}
+
+@theme inline {
+  --color-primary: var(--primary);
+  --color-primary-hover: var(--primary-hover);
+  --color-primary-soft: var(--primary-soft);
+  --color-accent: var(--accent);
+  --color-accent-soft: var(--accent-soft);
+  --color-background: var(--background);
+  --color-surface: var(--surface);
+  --color-border: var(--border);
+  --color-foreground: var(--foreground);
+  --color-muted: var(--muted);
+  --color-success: var(--success);
+  --color-success-soft: var(--success-soft);
+  --color-danger: var(--danger);
+  --color-danger-soft: var(--danger-soft);
+  --color-warning: var(--warning);
+  --font-sans: var(--font-app);
+}
+
+body {
+  background: var(--background);
+  color: var(--foreground);
+  font-family: var(--font-app), system-ui, sans-serif;
+}
+
+button,
+a {
+  -webkit-tap-highlight-color: transparent;
+}
+
+:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
