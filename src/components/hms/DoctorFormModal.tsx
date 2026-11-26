@@ -2,10 +2,11 @@
 
 import { useEffect, useState } from "react";
 
+import { CoordinateFields, coordinateBody } from "@/components/hms/CoordinateFields";
 import { Alert, Button, Field, Input, Modal, Select, Textarea } from "@/components/ui";
 import { api, buildQuery, errorMessage } from "@/lib/api";
-import { WEEKDAYS } from "@/lib/hms";
-import type { Department, Doctor, Gender, Paginated, Weekday } from "@/lib/types";
+import { DESIGNATIONS, WEEKDAYS } from "@/lib/hms";
+import type { Department, Doctor, Gender, LatLng, Paginated, Weekday } from "@/lib/types";
 
 interface FormState {
   first_name: string;
@@ -14,9 +15,13 @@ interface FormState {
   email: string;
   phone: string;
   department: string;
+  designation: string;
   specialization: string;
   qualification: string;
   registration_no: string;
+  chamber: string;
+  latitude: string;
+  longitude: string;
   experience_years: string;
   consultation_fee: string;
   available_days: Weekday[];
@@ -27,7 +32,7 @@ interface FormState {
   is_active: boolean;
 }
 
-function initialState(d: Doctor | null): FormState {
+function initialState(d: Doctor | null, location?: LatLng): FormState {
   return {
     first_name: d?.first_name ?? "",
     last_name: d?.last_name ?? "",
@@ -35,9 +40,13 @@ function initialState(d: Doctor | null): FormState {
     email: d?.email ?? "",
     phone: d?.phone ?? "",
     department: d?.department ? String(d.department) : "",
+    designation: d?.designation ?? "",
     specialization: d?.specialization ?? "",
     qualification: d?.qualification ?? "",
     registration_no: d?.registration_no ?? "",
+    chamber: d?.chamber ?? "",
+    latitude: d?.latitude ?? (location ? location.lat.toFixed(6) : ""),
+    longitude: d?.longitude ?? (location ? location.lng.toFixed(6) : ""),
     experience_years: d ? String(d.experience_years) : "",
     consultation_fee: d ? String(Number(d.consultation_fee)) : "",
     available_days: d?.available_days ?? ["sat", "sun", "mon", "tue", "wed", "thu"],
@@ -55,20 +64,23 @@ function Section({ children }: { children: React.ReactNode }) {
 
 export function DoctorFormModal({
   doctor,
+  location,
   onClose,
   onSaved,
 }: {
   doctor: Doctor | null;
+  /** Pre-fills the map position when adding from the Map page. */
+  location?: LatLng;
   onClose: () => void;
   onSaved: (doctor: Doctor) => void;
 }) {
   const isEdit = doctor !== null;
-  const [form, setForm] = useState<FormState>(() => initialState(doctor));
+  const [form, setForm] = useState<FormState>(() => initialState(doctor, location));
   const [departments, setDepartments] = useState<Department[]>([]);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
   const set = <K extends keyof FormState>(key: K, value: FormState[K]) => setForm((f) => ({ ...f, [key]: value }));
-  const text = (key: "first_name" | "last_name" | "email" | "phone" | "specialization" | "qualification" | "registration_no" | "experience_years" | "consultation_fee" | "shift_start" | "shift_end" | "joined_on" | "bio") => ({
+  const text = (key: "first_name" | "last_name" | "email" | "phone" | "designation" | "specialization" | "qualification" | "registration_no" | "chamber" | "experience_years" | "consultation_fee" | "shift_start" | "shift_end" | "joined_on" | "bio") => ({
     value: form[key],
     onChange: (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => set(key, e.target.value),
   });
@@ -95,6 +107,7 @@ export function DoctorFormModal({
       shift_start: form.shift_start || null,
       shift_end: form.shift_end || null,
       joined_on: form.joined_on || null,
+      ...coordinateBody(form.latitude, form.longitude),
     };
     try {
       const saved = isEdit
@@ -138,7 +151,15 @@ export function DoctorFormModal({
               ))}
             </Select>
           </Field>
-          <Field label="Specialization">
+          <Field label="Designation">
+            <Input {...text("designation")} list="doctor-designations" placeholder="e.g. Senior Consultant" />
+            <datalist id="doctor-designations">
+              {DESIGNATIONS.map((d) => (
+                <option key={d} value={d} />
+              ))}
+            </datalist>
+          </Field>
+          <Field label="Specialist in">
             <Input {...text("specialization")} placeholder="e.g. Cardiologist" />
           </Field>
           <Field label="Qualification">
@@ -157,6 +178,16 @@ export function DoctorFormModal({
             <Input {...text("phone")} type="tel" />
           </Field>
         </div>
+
+        <Section>Chamber &amp; map location</Section>
+        <Field label="Chamber / practice location">
+          <Input {...text("chamber")} placeholder="e.g. Northstar General Hospital, Dhanmondi" />
+        </Field>
+        <CoordinateFields
+          latitude={form.latitude}
+          longitude={form.longitude}
+          onChange={(lat, lng) => setForm((f) => ({ ...f, latitude: lat, longitude: lng }))}
+        />
 
         <Section>Schedule &amp; fee</Section>
         <div>

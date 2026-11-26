@@ -8,6 +8,7 @@ import {
   LayoutDashboard,
   LayoutGrid,
   LogOut,
+  Map as MapIcon,
   Settings,
   Stethoscope,
   UserRound,
@@ -21,7 +22,13 @@ import { Avatar } from "@/components/ui";
 import { useAuth } from "@/context/AuthContext";
 
 export const NAV_GROUPS = [
-  { title: "Overview", items: [{ href: "/dashboard", label: "Dashboard", icon: LayoutDashboard }] },
+  {
+    title: "Overview",
+    items: [
+      { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
+      { href: "/map", label: "Map", icon: MapIcon },
+    ],
+  },
   {
     title: "Clinical",
     items: [

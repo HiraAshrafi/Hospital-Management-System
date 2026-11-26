@@ -2,10 +2,12 @@
 
 import { useState } from "react";
 
+import { CoordinateFields, coordinateBody } from "@/components/hms/CoordinateFields";
 import { Alert, Button, Field, Input, Modal, Select, Textarea } from "@/components/ui";
 import { api, errorMessage } from "@/lib/api";
+import { DHAKA, distanceKm } from "@/lib/hms";
 import { HOSPITAL_TYPES, OTHER_PLATFORMS, withScheme } from "@/lib/hospitals";
-import type { Hospital, HospitalType, OtherPlatform } from "@/lib/types";
+import type { Hospital, HospitalType, LatLng, OtherPlatform } from "@/lib/types";
 
 interface FormState {
   name: string;
@@ -27,21 +29,25 @@ interface FormState {
   emergency_available: boolean;
   bed_capacity: string;
   operating_hours: string;
+  latitude: string;
+  longitude: string;
   is_active: boolean;
 }
 
 const splitItems = (value: string) => [...new Set(value.split(",").map((item) => item.trim()).filter(Boolean))];
 
-function initialState(hospital: Hospital | null): FormState {
+function initialState(hospital: Hospital | null, location?: LatLng): FormState {
+  // A point picked on the map within ~30 km of Dhaka starts with Dhaka as the city.
+  const inDhaka = !hospital && location !== undefined && distanceKm(location, DHAKA) <= 30;
   return {
     name: hospital?.name ?? "",
     hospital_type: hospital?.hospital_type ?? "general",
     phone: hospital?.phone ?? "",
     email: hospital?.email ?? "",
     street: hospital?.street ?? "",
-    city: hospital?.city ?? "",
-    state: hospital?.state ?? "",
-    country: hospital?.country ?? "",
+    city: hospital?.city ?? (inDhaka ? "Dhaka" : ""),
+    state: hospital?.state ?? (inDhaka ? "Dhaka Division" : ""),
+    country: hospital?.country ?? (location ? "Bangladesh" : ""),
     website: hospital?.website ?? "",
     facebook: hospital?.facebook ?? "",
     twitter: hospital?.twitter ?? "",
@@ -53,6 +59,8 @@ function initialState(hospital: Hospital | null): FormState {
     emergency_available: hospital?.emergency_available ?? false,
     bed_capacity: hospital?.bed_capacity?.toString() ?? "",
     operating_hours: hospital?.operating_hours ?? "",
+    latitude: hospital?.latitude ?? (location ? location.lat.toFixed(6) : ""),
+    longitude: hospital?.longitude ?? (location ? location.lng.toFixed(6) : ""),
     is_active: hospital?.is_active ?? true,
   };
 }
@@ -63,21 +71,24 @@ function SectionTitle({ children }: { children: React.ReactNode }) {
 
 export function HospitalFormModal({
   hospital,
+  location,
   onClose,
   onSaved,
 }: {
   hospital: Hospital | null;
+  /** Pre-fills the map position when adding from the Map page. */
+  location?: LatLng;
   onClose: () => void;
   onSaved: (hospital: Hospital) => void;
 }) {
   const isEdit = hospital !== null;
-  const [form, setForm] = useState<FormState>(() => initialState(hospital));
+  const [form, setForm] = useState<FormState>(() => initialState(hospital, location));
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
 
   const set = <K extends keyof FormState>(key: K, value: FormState[K]) =>
     setForm((current) => ({ ...current, [key]: value }));
-  const text = (key: Exclude<keyof FormState, "emergency_available" | "is_active" | "other_platform" | "hospital_type">) => ({
+  const text = (key: Exclude<keyof FormState, "emergency_available" | "is_active" | "other_platform" | "hospital_type" | "latitude" | "longitude">) => ({
     value: form[key],
     onChange: (event: React.ChangeEvent<HTMLInputElement>) => set(key, event.target.value),
   });
@@ -107,6 +118,7 @@ export function HospitalFormModal({
       emergency_available: form.emergency_available,
       bed_capacity: form.bed_capacity === "" ? null : Number(form.bed_capacity),
       operating_hours: form.operating_hours.trim(),
+      ...coordinateBody(form.latitude, form.longitude),
       is_active: form.is_active,
     };
 
@@ -160,6 +172,11 @@ export function HospitalFormModal({
             <Input {...text("country")} autoComplete="country-name" />
           </Field>
         </div>
+        <CoordinateFields
+          latitude={form.latitude}
+          longitude={form.longitude}
+          onChange={(lat, lng) => setForm((current) => ({ ...current, latitude: lat, longitude: lng }))}
+        />
 
         <SectionTitle>Care &amp; capacity</SectionTitle>
         <div className="grid gap-4 sm:grid-cols-2">

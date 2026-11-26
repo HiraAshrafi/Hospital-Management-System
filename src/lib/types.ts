@@ -75,9 +75,13 @@ export interface Doctor {
   phone: string;
   department: number | null;
   department_name: string;
+  designation: string;
   specialization: string;
   qualification: string;
   registration_no: string;
+  chamber: string;
+  latitude: string | null;
+  longitude: string | null;
   experience_years: number;
   consultation_fee: string;
   available_days: Weekday[];
@@ -227,6 +231,8 @@ export interface Hospital {
   emergency_available: boolean;
   bed_capacity: number | null;
   operating_hours: string;
+  latitude: string | null;
+  longitude: string | null;
   is_active: boolean;
   manager: UserMini | null;
   manager_assigned_at: string | null;
@@ -258,4 +264,54 @@ export interface LoginResponse {
   access: string;
   refresh: string;
   user: Profile;
+}
+
+export interface LatLng {
+  lat: number;
+  lng: number;
+}
+
+export interface MapHospital {
+  id: number;
+  name: string;
+  hospital_type: HospitalType;
+  phone: string;
+  email: string;
+  address: string;
+  emergency_available: boolean;
+  bed_capacity: number | null;
+  operating_hours: string;
+  specialties: string[];
+  is_active: boolean;
+  latitude: number;
+  longitude: number;
+  distance_km: number;
+}
+
+export interface MapDoctor {
+  id: number;
+  full_name: string;
+  designation: string;
+  specialization: string;
+  qualification: string;
+  department_name: string;
+  phone: string;
+  email: string;
+  chamber: string;
+  available_days: Weekday[];
+  shift_start: string | null;
+  shift_end: string | null;
+  consultation_fee: string;
+  is_active: boolean;
+  latitude: number;
+  longitude: number;
+  distance_km: number;
+}
+
+export interface MapData {
+  center: { name: string; lat: number; lng: number };
+  radius_km: number;
+  hospitals: MapHospital[];
+  doctors: MapDoctor[];
+  unplaced: { hospitals: number; doctors: number };
 }

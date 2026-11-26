@@ -74,3 +74,26 @@ export function trend(current: number, previous: number): number | null {
 export function doctorName(name: string): string {
   return `Dr. ${name}`;
 }
+
+export const DESIGNATIONS = [
+  "Professor",
+  "Associate Professor",
+  "Assistant Professor",
+  "Senior Consultant",
+  "Consultant",
+  "Junior Consultant",
+  "Medical Officer",
+  "Resident",
+];
+
+/** Centre of Dhaka; the map opens here. */
+export const DHAKA = { lat: 23.8103, lng: 90.4125 };
+
+/** Great-circle distance in km (haversine). */
+export function distanceKm(a: { lat: number; lng: number }, b: { lat: number; lng: number }): number {
+  const rad = (d: number) => (d * Math.PI) / 180;
+  const dLat = rad(b.lat - a.lat);
+  const dLng = rad(b.lng - a.lng);
+  const h = Math.sin(dLat / 2) ** 2 + Math.cos(rad(a.lat)) * Math.cos(rad(b.lat)) * Math.sin(dLng / 2) ** 2;
+  return 2 * 6371 * Math.asin(Math.sqrt(h));
+}
