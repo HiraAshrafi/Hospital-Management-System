@@ -1,15 +1,14 @@
 import type { Metadata } from "next";
-import { Inter } from "next/font/google";
+import { Plus_Jakarta_Sans } from "next/font/google";
 
 import { AuthProvider } from "@/context/AuthContext";
 import "./globals.css";
 
-// PLACEHOLDER font — swap for the typeface used in the Figma file.
-const appFont = Inter({ variable: "--font-app", subsets: ["latin"] });
+const appFont = Plus_Jakarta_Sans({ variable: "--font-app", subsets: ["latin"] });
 
 export const metadata: Metadata = {
-  title: "Hospital Management System Admin",
-  description: "Admin panel for the Hospital Management System",
+  title: "Hospital Management System",
+  description: "Admin panel for patients, doctors, appointments and departments",
 };
 
 export default function RootLayout({ children }: LayoutProps<"/">) {

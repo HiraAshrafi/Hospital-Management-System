@@ -1,25 +1,39 @@
 @import "tailwindcss";
 
+/*
+ * Design tokens for the Hospital Management System admin.
+ * Every component reads from these, so matching a reference design (e.g. Synexa)
+ * starts here: colours, radius and sidebar width. The font is set in app/layout.tsx.
+ */
 :root {
-  --primary: #0f766e;
-  --primary-hover: #115e59;
-  --primary-soft: #e6f4f1;
-  --accent: #0e7490;
-  --accent-soft: #e8f5f8;
+  --primary: #1f6fd6;
+  --primary-hover: #185bb3;
+  --primary-soft: #e8f1fd;
+  --accent: #0d9488;
+  --accent-soft: #e3f6f4;
 
-  --background: #f3f6fa;
+  --background: #f4f7fb;
   --surface: #ffffff;
-  --border: #e2e8f0;
-  --foreground: #17212b;
-  --muted: #64748b;
+  --surface-muted: #f8fafd;
+  --border: #e4e9f1;
+  --foreground: #0f1b2d;
+  --muted: #66758a;
 
-  --success: #16834a;
-  --success-soft: #e8f6ee;
-  --danger: #c2413b;
-  --danger-soft: #fff0ef;
-  --warning: #b7791f;
+  --success: #15803d;
+  --success-soft: #e7f6ec;
+  --danger: #d03b3b;
+  --danger-soft: #fdeeee;
+  --warning: #b45309;
+  --warning-soft: #fdf3e2;
+  --violet: #6a4ce2;
+  --violet-soft: #efebfd;
 
-  --sidebar-width: 272px;
+  /* Chart series: slots 1–2 of the validated categorical palette (dataviz reference). */
+  --chart-1: #257de0;
+  --chart-2: #f47230;
+  --chart-track: #edf1f7;
+
+  --sidebar-width: 264px;
 }
 
 @theme inline {
@@ -30,6 +44,7 @@
   --color-accent-soft: var(--accent-soft);
   --color-background: var(--background);
   --color-surface: var(--surface);
+  --color-surface-muted: var(--surface-muted);
   --color-border: var(--border);
   --color-foreground: var(--foreground);
   --color-muted: var(--muted);
@@ -38,6 +53,12 @@
   --color-danger: var(--danger);
   --color-danger-soft: var(--danger-soft);
   --color-warning: var(--warning);
+  --color-warning-soft: var(--warning-soft);
+  --color-violet: var(--violet);
+  --color-violet-soft: var(--violet-soft);
+  --color-chart-1: var(--chart-1);
+  --color-chart-2: var(--chart-2);
+  --color-chart-track: var(--chart-track);
   --font-sans: var(--font-app);
 }
 
@@ -53,6 +74,6 @@ a {
 }
 
 :focus-visible {
-  outline: 2px solid var(--accent);
+  outline: 2px solid var(--primary);
   outline-offset: 2px;
 }

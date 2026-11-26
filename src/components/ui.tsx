@@ -28,7 +28,7 @@ export function Button({
     <button
       {...props}
       disabled={disabled || loading}
-      className={`inline-flex items-center justify-center gap-2 rounded-lg px-4 py-2.5 text-sm font-medium transition-colors disabled:cursor-not-allowed disabled:opacity-60 ${buttonStyles[variant]} ${className}`}
+      className={`inline-flex items-center justify-center gap-2 rounded-xl px-4 py-2.5 text-sm font-semibold transition-colors disabled:cursor-not-allowed disabled:opacity-60 ${buttonStyles[variant]} ${className}`}
     >
       {loading && <Loader2 className="h-4 w-4 animate-spin" />}
       {children}
@@ -47,7 +47,7 @@ export function Field({ label, error, children }: { label: string; error?: strin
 }
 
 const controlClass =
-  "w-full rounded-lg border border-border bg-surface px-3.5 py-2.5 text-sm text-foreground outline-none transition placeholder:text-muted focus:border-primary focus:ring-2 focus:ring-primary/20";
+  "w-full rounded-xl border border-border bg-surface px-3.5 py-2.5 text-sm text-foreground outline-none transition placeholder:text-muted focus:border-primary focus:ring-4 focus:ring-primary/10";
 
 export function Input(props: React.InputHTMLAttributes<HTMLInputElement>) {
   return <input {...props} className={`${controlClass} ${props.className ?? ""}`} />;
@@ -62,17 +62,77 @@ export function Textarea(props: React.TextareaHTMLAttributes<HTMLTextAreaElement
 }
 
 export function Card({ className = "", children }: { className?: string; children: React.ReactNode }) {
-  return <div className={`rounded-xl border border-border bg-surface ${className}`}>{children}</div>;
+  return <div className={`rounded-2xl border border-border bg-surface shadow-[0_1px_2px_rgba(15,27,45,0.04)] ${className}`}>{children}</div>;
 }
 
-export function Badge({ tone, children }: { tone: "success" | "danger" | "primary" | "accent"; children: React.ReactNode }) {
-  const tones = {
+export type BadgeTone = "success" | "danger" | "primary" | "accent" | "warning" | "info" | "violet" | "neutral";
+
+export function Badge({ tone, children }: { tone: BadgeTone; children: React.ReactNode }) {
+  const tones: Record<BadgeTone, string> = {
     success: "bg-success-soft text-success",
     danger: "bg-danger-soft text-danger",
     primary: "bg-primary-soft text-primary",
-    accent: "bg-accent-soft text-warning",
+    accent: "bg-warning-soft text-warning", // kept for "pending" badges
+    warning: "bg-warning-soft text-warning",
+    info: "bg-accent-soft text-accent",
+    violet: "bg-violet-soft text-violet",
+    neutral: "bg-background text-muted",
   };
-  return <span className={`inline-flex rounded-full px-2.5 py-1 text-xs font-medium ${tones[tone]}`}>{children}</span>;
+  return <span className={`inline-flex items-center gap-1 whitespace-nowrap rounded-full px-2.5 py-1 text-xs font-semibold ${tones[tone]}`}>{children}</span>;
+}
+
+/** Card heading row: title, optional subtitle, optional right-hand action. */
+export function CardHeader({ title, subtitle, action }: { title: string; subtitle?: string; action?: React.ReactNode }) {
+  return (
+    <div className="flex items-start justify-between gap-3 px-5 pt-5 pb-3">
+      <div className="min-w-0">
+        <h2 className="text-[15px] font-bold tracking-tight">{title}</h2>
+        {subtitle && <p className="mt-0.5 text-xs text-muted">{subtitle}</p>}
+      </div>
+      {action}
+    </div>
+  );
+}
+
+/** Segmented tabs used above lists (Today / Upcoming / …). */
+export function Tabs<T extends string>({
+  value,
+  options,
+  onChange,
+  label,
+}: {
+  value: T;
+  options: { value: T; label: string }[];
+  onChange: (value: T) => void;
+  label: string;
+}) {
+  return (
+    <div className="inline-flex w-fit max-w-full overflow-x-auto rounded-xl border border-border bg-surface p-1" role="tablist" aria-label={label}>
+      {options.map((tab) => (
+        <button
+          key={tab.label}
+          role="tab"
+          aria-selected={value === tab.value}
+          onClick={() => onChange(tab.value)}
+          className={`whitespace-nowrap rounded-lg px-3.5 py-1.5 text-sm font-semibold transition-colors ${
+            value === tab.value ? "bg-primary text-white shadow-sm" : "text-muted hover:text-foreground"
+          }`}
+        >
+          {tab.label}
+        </button>
+      ))}
+    </div>
+  );
+}
+
+export function EmptyState({ icon, title, children }: { icon?: React.ReactNode; title: string; children?: React.ReactNode }) {
+  return (
+    <div className="flex flex-col items-center justify-center px-6 py-14 text-center">
+      {icon && <span className="mb-3 flex h-12 w-12 items-center justify-center rounded-2xl bg-primary-soft text-primary">{icon}</span>}
+      <p className="font-semibold">{title}</p>
+      {children && <div className="mt-1 text-sm text-muted">{children}</div>}
+    </div>
+  );
 }
 
 export function Avatar({ name, email, src, size = 36 }: { name: string; email: string; src?: string | null; size?: number }) {
