@@ -1,10 +1,12 @@
 "use client";
 
 import {
+  Ambulance,
   Building2,
   CalendarDays,
   ClipboardList,
   Hospital,
+  IdCard,
   LayoutDashboard,
   LayoutGrid,
   LogOut,
@@ -27,6 +29,8 @@ export const NAV_GROUPS = [
     items: [
       { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
       { href: "/map", label: "Map", icon: MapIcon },
+      { href: "/ambulances", label: "Ambulances", icon: Ambulance },
+      { href: "/ambulance-drivers", label: "Drivers & Fares", icon: IdCard },
     ],
   },
   {

@@ -315,3 +315,179 @@ export interface MapData {
   doctors: MapDoctor[];
   unplaced: { hospitals: number; doctors: number };
 }
+
+export type AmbulanceType = "basic" | "als" | "icu" | "freezer";
+export type AmbulanceStatus = "available" | "on_trip" | "offline" | "maintenance";
+export type TripStatus = "dispatched" | "picked_up" | "completed" | "cancelled";
+
+export interface Ambulance {
+  id: number;
+  vehicle_no: string;
+  type: AmbulanceType;
+  driver_name: string;
+  driver_phone: string;
+  driver_license: string;
+  base_hospital: number | null;
+  base_hospital_name: string;
+  base_fare: string;
+  per_km_rate: string;
+  min_fare: string;
+  status: AmbulanceStatus;
+  latitude: string | null;
+  longitude: string | null;
+  speed_kmh: string | null;
+  last_seen_at: string | null;
+  is_online: boolean;
+  last_seen_seconds: number | null;
+  active_trip: { id: number; status: TripStatus } | null;
+  tracking_token: string;
+  notes: string;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface FareBreakdown {
+  base_fare: number;
+  per_km_rate: number;
+  distance_km: number;
+  distance_charge: number;
+  minimum_fare: number;
+  minimum_applied: boolean;
+  night: boolean;
+  night_surcharge: number;
+  total: number;
+}
+
+export interface AmbulanceTrip {
+  id: number;
+  ambulance: number;
+  ambulance_info: { id: number; vehicle_no: string; type: AmbulanceType; driver_name: string; driver_phone: string };
+  patient: number | null;
+  patient_mrn: string;
+  patient_name: string;
+  contact_phone: string;
+  pickup_address: string;
+  pickup_lat: string;
+  pickup_lng: string;
+  destination_hospital: number | null;
+  destination_hospital_name: string;
+  destination_address: string;
+  destination_lat: string;
+  destination_lng: string;
+  distance_km: string;
+  estimated_fare: string;
+  fare_breakdown: FareBreakdown;
+  final_fare: string | null;
+  status: TripStatus;
+  notes: string;
+  created_at: string;
+  picked_up_at: string | null;
+  completed_at: string | null;
+  cancelled_at: string | null;
+}
+
+export interface LiveAmbulance {
+  id: number;
+  vehicle_no: string;
+  type: AmbulanceType;
+  driver_name: string;
+  driver_phone: string;
+  status: AmbulanceStatus;
+  base_hospital_name: string;
+  latitude: number | null;
+  longitude: number | null;
+  speed_kmh: number | null;
+  is_online: boolean;
+  last_seen_seconds: number | null;
+  active_trip_id: number | null;
+  base_fare: number;
+  per_km_rate: number;
+  min_fare: number;
+  trail: [number, number][];
+}
+
+export interface LiveTrip extends AmbulanceTrip {
+  remaining_km: number | null;
+  eta_minutes: number | null;
+}
+
+export interface LiveData {
+  server_time: string;
+  signal_timeout_seconds: number;
+  night_pricing: boolean;
+  stats: {
+    total: number;
+    available: number;
+    on_trip: number;
+    off_duty: number;
+    no_signal: number;
+    trips_today: number;
+    completed_today: number;
+    revenue_today: number;
+  };
+  ambulances: LiveAmbulance[];
+  trips: LiveTrip[];
+}
+
+export interface NearHospital {
+  id: number;
+  name: string;
+  address: string;
+  emergency_available: boolean;
+  latitude: number;
+  longitude: number;
+  distance_km: number;
+}
+
+export interface AmbulanceQuote {
+  pickup: LatLng;
+  nearest_hospitals: NearHospital[];
+  night_pricing: boolean;
+  pricing_rules: { road_factor: number; avg_speed_kmh: number; night_surcharge_percent: number; default_rates: Record<AmbulanceType, [number, number, number]> };
+  destination?: LatLng;
+  trip_km?: number;
+  trip_minutes?: number;
+  options?: {
+    ambulance: { id: number; vehicle_no: string; type: AmbulanceType; driver_name: string; driver_phone: string };
+    to_pickup_km: number;
+    eta_minutes: number;
+    fare: FareBreakdown;
+  }[];
+  available_without_signal?: number;
+}
+
+export type StatsPeriod = "today" | "7d" | "30d" | "all";
+
+export interface DriverRow {
+  id: number;
+  vehicle_no: string;
+  type: AmbulanceType;
+  driver_name: string;
+  driver_phone: string;
+  driver_license: string;
+  status: AmbulanceStatus;
+  is_online: boolean;
+  last_seen_seconds: number | null;
+  base_hospital_name: string;
+  base_fare: number;
+  per_km_rate: number;
+  min_fare: number;
+  quote: FareBreakdown;
+  trips_completed: number;
+  trips_cancelled: number;
+  total_km: number;
+  revenue: number;
+  avg_fare: number | null;
+  avg_per_km: number | null;
+  last_trip_at: string | null;
+  active_trip: { id: number; status: TripStatus } | null;
+}
+
+export interface DriversData {
+  period: StatsPeriod;
+  since: string | null;
+  quote_km: number;
+  night_pricing: boolean;
+  summary: { drivers: number; on_duty: number; trips: number; cancelled: number; km: number; revenue: number; avg_fare: number | null; avg_per_km: number | null };
+  drivers: DriverRow[];
+}
