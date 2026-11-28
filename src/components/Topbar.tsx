@@ -1,6 +1,6 @@
 "use client";
 
-import { Bell, CalendarClock, ClipboardList, Menu, Search } from "lucide-react";
+import { Bell, CalendarClock, ChevronDown, ClipboardList, Menu, Search } from "lucide-react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
@@ -55,7 +55,7 @@ function PatientSearch() {
         onKeyDown={(e) => e.key === "Escape" && setOpen(false)}
         placeholder="Search patients by name, ID or phone"
         aria-label="Search patients"
-        className="w-full rounded-xl border border-transparent bg-background py-2.5 pl-10 pr-3 text-sm outline-none transition placeholder:text-muted focus:border-primary focus:bg-surface focus:ring-4 focus:ring-primary/10"
+        className="w-full rounded-full border border-border bg-surface-muted py-2.5 pl-10 pr-4 text-sm outline-none transition placeholder:text-muted focus:border-primary focus:bg-surface focus:ring-4 focus:ring-primary/10"
       />
       {showResults && (
         <div className="absolute left-0 right-0 top-full z-30 mt-2 overflow-hidden rounded-xl border border-border bg-surface shadow-lg">
@@ -126,7 +126,7 @@ function Notifications() {
     <div ref={boxRef} className="relative">
       <button
         onClick={() => setOpen((v) => !v)}
-        className="relative flex h-10 w-10 items-center justify-center rounded-xl text-muted hover:bg-background hover:text-foreground"
+        className="relative flex h-10 w-10 items-center justify-center rounded-full border border-border bg-surface text-muted hover:bg-primary-soft hover:text-primary"
         aria-label={`Notifications${total ? ` (${total})` : ""}`}
         aria-expanded={open}
       >
@@ -164,20 +164,21 @@ export function Topbar({ onMenu }: { onMenu: () => void }) {
   const title = NAV_ITEMS.find((item) => pathname.startsWith(item.href))?.label ?? "";
 
   return (
-    <header className="sticky top-0 z-20 flex h-[72px] items-center gap-3 border-b border-border bg-surface/90 px-4 backdrop-blur sm:px-6">
+    <header className="sticky top-0 z-20 flex h-[76px] items-center gap-3 border-b border-border bg-surface/90 px-4 backdrop-blur sm:px-6">
       <button className="rounded-lg p-1.5 text-muted hover:bg-background lg:hidden" onClick={onMenu} aria-label="Open menu">
         <Menu className="h-6 w-6" />
       </button>
-      <h1 className="min-w-0 flex-1 truncate text-lg font-bold tracking-tight">{title}</h1>
+      <h1 className="min-w-0 flex-1 truncate text-lg font-extrabold tracking-tight text-navy">{title}</h1>
       <PatientSearch />
       <Notifications />
       {user && (
-        <Link href="/settings" className="flex items-center gap-3 rounded-xl py-1 pl-1 pr-2 hover:bg-background">
+        <Link href="/settings" className="flex items-center gap-2.5 rounded-full border border-border bg-surface py-1 pl-1 pr-3 hover:border-primary/40 hover:bg-primary-soft">
           <Avatar name={user.full_name} email={user.email} src={user.avatar} />
           <div className="hidden text-left xl:block">
-            <p className="text-sm font-semibold leading-tight">{user.full_name || "Admin"}</p>
+            <p className="text-sm font-bold leading-tight text-navy">{user.full_name || "Admin"}</p>
             <p className="text-xs text-muted">{user.is_superuser ? "Super Admin" : "Admin"}</p>
           </div>
+          <ChevronDown className="hidden h-4 w-4 text-muted sm:block" />
         </Link>
       )}
     </header>

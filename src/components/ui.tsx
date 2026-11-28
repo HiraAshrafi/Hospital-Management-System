@@ -7,14 +7,20 @@ import { initials } from "@/lib/api";
 
 const openModals: symbol[] = [];
 
-type ButtonVariant = "primary" | "secondary" | "danger" | "ghost";
+type ButtonVariant = "primary" | "success" | "secondary" | "danger" | "ghost";
 
 const buttonStyles: Record<ButtonVariant, string> = {
-  primary: "bg-primary text-white hover:bg-primary-hover",
+  primary: "brand-btn bg-primary text-white",
+  success: "bg-accent text-white shadow-[0_10px_22px_-12px_var(--accent)] hover:bg-accent-hover",
   secondary: "bg-surface text-foreground border border-border hover:bg-background",
-  danger: "bg-danger text-white hover:opacity-90",
+  danger: "bg-danger text-white shadow-[0_10px_22px_-12px_var(--danger)] hover:bg-danger-hover",
   ghost: "text-muted hover:bg-background hover:text-foreground",
 };
+
+/** Button look for links (e.g. a quick action that navigates). */
+export function buttonClass(variant: ButtonVariant = "primary", className = "") {
+  return `inline-flex items-center justify-center gap-2 rounded-xl px-4 py-2.5 text-sm font-semibold transition-colors ${buttonStyles[variant]} ${className}`;
+}
 
 export function Button({
   variant = "primary",
@@ -28,7 +34,7 @@ export function Button({
     <button
       {...props}
       disabled={disabled || loading}
-      className={`inline-flex items-center justify-center gap-2 rounded-xl px-4 py-2.5 text-sm font-semibold transition-colors disabled:cursor-not-allowed disabled:opacity-60 ${buttonStyles[variant]} ${className}`}
+      className={buttonClass(variant, `disabled:cursor-not-allowed disabled:opacity-60 ${className}`)}
     >
       {loading && <Loader2 className="h-4 w-4 animate-spin" />}
       {children}
@@ -62,7 +68,7 @@ export function Textarea(props: React.TextareaHTMLAttributes<HTMLTextAreaElement
 }
 
 export function Card({ className = "", children }: { className?: string; children: React.ReactNode }) {
-  return <div className={`rounded-2xl border border-border bg-surface shadow-[0_1px_2px_rgba(15,27,45,0.04)] ${className}`}>{children}</div>;
+  return <div className={`rounded-2xl border border-border bg-surface shadow-card ${className}`}>{children}</div>;
 }
 
 export type BadgeTone = "success" | "danger" | "primary" | "accent" | "warning" | "info" | "violet" | "neutral";
@@ -74,7 +80,7 @@ export function Badge({ tone, children }: { tone: BadgeTone; children: React.Rea
     primary: "bg-primary-soft text-primary",
     accent: "bg-warning-soft text-warning", // kept for "pending" badges
     warning: "bg-warning-soft text-warning",
-    info: "bg-accent-soft text-accent",
+    info: "bg-info-soft text-info",
     violet: "bg-violet-soft text-violet",
     neutral: "bg-background text-muted",
   };
@@ -86,7 +92,7 @@ export function CardHeader({ title, subtitle, action }: { title: string; subtitl
   return (
     <div className="flex items-start justify-between gap-3 px-5 pt-5 pb-3">
       <div className="min-w-0">
-        <h2 className="text-[15px] font-bold tracking-tight">{title}</h2>
+        <h2 className="text-[15px] font-bold tracking-tight text-navy">{title}</h2>
         {subtitle && <p className="mt-0.5 text-xs text-muted">{subtitle}</p>}
       </div>
       {action}

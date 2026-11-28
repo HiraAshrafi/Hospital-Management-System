@@ -1,47 +1,70 @@
 @import "tailwindcss";
 
 /*
- * Design tokens for the Hospital Management System admin.
- * Every component reads from these, so matching a reference design (e.g. Synexa)
- * starts here: colours, radius and sidebar width. The font is set in app/layout.tsx.
+ * Design tokens: AshrafiTech brand ("Smart Healthcare. Better Tomorrow.").
+ * Colour code: navy = brand/sidebar, blue = primary & patients, green = appointments & positive actions,
+ * red = ambulance & emergency, purple = sales/revenue. Every component reads from these tokens.
+ * The font is set in app/layout.tsx; the logo is components/Brand.tsx.
  */
 :root {
-  --primary: #1f6fd6;
-  --primary-hover: #185bb3;
-  --primary-soft: #e8f1fd;
-  --accent: #0d9488;
-  --accent-soft: #e3f6f4;
+  --primary: #1a5fd4;
+  --primary-hover: #134bb0;
+  --primary-soft: #e8f0fd;
+  --primary-bright: #256de0; /* gradient end; still 4.8:1 with white text */
 
-  --background: #f4f7fb;
+  --navy: #0b2566;
+  --navy-deep: #071a4a;
+
+  /* Brand green. --accent passes 4.5:1 with white text; --accent-bright is for icons/gradients. */
+  --accent: #0a8257;
+  --accent-hover: #086c48;
+  --accent-soft: #e3f6ee;
+  --accent-bright: #18ad78;
+
+  --info: #0e7fa6;
+  --info-soft: #e2f3f9;
+
+  --background: #f2f6fc;
   --surface: #ffffff;
-  --surface-muted: #f8fafd;
-  --border: #e4e9f1;
-  --foreground: #0f1b2d;
-  --muted: #66758a;
+  --surface-muted: #f7faff;
+  --border: #e2e9f4;
+  --foreground: #0d1d42;
+  --muted: #5d6b85;
 
-  --success: #15803d;
-  --success-soft: #e7f6ec;
-  --danger: #d03b3b;
-  --danger-soft: #fdeeee;
+  --success: #12804c;
+  --success-soft: #e5f6ec;
+  --danger: #d9363b;
+  --danger-hover: #bb2a2f;
+  --danger-soft: #fdecec;
   --warning: #b45309;
   --warning-soft: #fdf3e2;
-  --violet: #6a4ce2;
-  --violet-soft: #efebfd;
+  --violet: #7445e0;
+  --violet-soft: #f0eafd;
+
+  --card-shadow: 0 1px 2px rgba(11, 37, 102, 0.04), 0 8px 24px -14px rgba(11, 37, 102, 0.18);
 
   /* Chart series: slots 1–2 of the validated categorical palette (dataviz reference). */
   --chart-1: #257de0;
   --chart-2: #f47230;
   --chart-track: #edf1f7;
 
-  --sidebar-width: 264px;
+  --sidebar-width: 272px;
 }
 
 @theme inline {
   --color-primary: var(--primary);
   --color-primary-hover: var(--primary-hover);
   --color-primary-soft: var(--primary-soft);
+  --color-primary-bright: var(--primary-bright);
+  --color-navy: var(--navy);
+  --color-navy-deep: var(--navy-deep);
   --color-accent: var(--accent);
+  --color-accent-hover: var(--accent-hover);
   --color-accent-soft: var(--accent-soft);
+  --color-accent-bright: var(--accent-bright);
+  --color-info: var(--info);
+  --color-info-soft: var(--info-soft);
+  --color-danger-hover: var(--danger-hover);
   --color-background: var(--background);
   --color-surface: var(--surface);
   --color-surface-muted: var(--surface-muted);
@@ -60,6 +83,31 @@
   --color-chart-2: var(--chart-2);
   --color-chart-track: var(--chart-track);
   --font-sans: var(--font-app);
+  --shadow-card: var(--card-shadow);
+}
+
+@layer components {
+  /* Sidebar: deep navy, as in the brand artwork. */
+  .brand-sidebar {
+    background: linear-gradient(180deg, #0c2a70 0%, var(--navy) 45%, var(--navy-deep) 100%);
+  }
+
+  /* Login artwork panel: light sky gradient with soft light blooms. */
+  .brand-sky {
+    background:
+      radial-gradient(60% 50% at 85% 10%, rgba(255, 255, 255, 0.9) 0%, rgba(255, 255, 255, 0) 70%),
+      radial-gradient(50% 45% at 10% 90%, rgba(47, 124, 240, 0.16) 0%, rgba(47, 124, 240, 0) 70%),
+      linear-gradient(160deg, #f3f8ff 0%, #e3efff 50%, #d3e5ff 100%);
+  }
+
+  /* Primary call-to-action: blue gradient like "Get Started Today". */
+  .brand-btn {
+    background-image: linear-gradient(90deg, var(--primary) 0%, var(--primary-bright) 100%);
+    box-shadow: 0 10px 22px -12px rgba(26, 95, 212, 0.8);
+  }
+  .brand-btn:hover:not(:disabled) {
+    background-image: linear-gradient(90deg, var(--primary-hover) 0%, var(--primary) 100%);
+  }
 }
 
 body {

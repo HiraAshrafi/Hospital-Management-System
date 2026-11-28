@@ -7,8 +7,8 @@ import "./globals.css";
 const appFont = Plus_Jakarta_Sans({ variable: "--font-app", subsets: ["latin"] });
 
 export const metadata: Metadata = {
-  title: "Hospital Management System",
-  description: "Admin panel for patients, doctors, appointments and departments",
+  title: "AshrafiTech · Hospital Management System",
+  description: "AshrafiTech admin panel for patients, doctors, appointments, ambulances and hospitals. Smart Healthcare. Better Tomorrow.",
 };
 
 export default function RootLayout({ children }: LayoutProps<"/">) {

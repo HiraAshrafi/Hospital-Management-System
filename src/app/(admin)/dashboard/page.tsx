@@ -1,6 +1,7 @@
 "use client";
 
 import {
+  Ambulance,
   ArrowDownRight,
   ArrowUpRight,
   Building2,
@@ -21,7 +22,7 @@ import { AppointmentStatusBadge, AppointmentTypeBadge, BloodBadge } from "@/comp
 import { RankedBars, StatusSplit, VisitsChart } from "@/components/hms/charts";
 import { PatientDetailModal } from "@/components/hms/PatientDetailModal";
 import { PatientFormModal } from "@/components/hms/PatientFormModal";
-import { Alert, Avatar, Button, Card, CardHeader, Spinner } from "@/components/ui";
+import { Alert, Avatar, Button, buttonClass, Card, CardHeader, Spinner } from "@/components/ui";
 import { useAuth } from "@/context/AuthContext";
 import { api, errorMessage, formatDate } from "@/lib/api";
 import { doctorName, formatDay, formatMoney, formatShift, formatTime, GENDER_LABEL, trend } from "@/lib/hms";
@@ -39,6 +40,14 @@ function TrendPill({ value }: { value: number | null }) {
   );
 }
 
+// Brand colour code: blue = patients, green = appointments, red = care/emergency, purple = money.
+const KPI_TONES = {
+  primary: { icon: "bg-primary-soft text-primary", bar: "from-primary to-primary-bright" },
+  accent: { icon: "bg-accent-soft text-accent", bar: "from-accent to-accent-bright" },
+  danger: { icon: "bg-danger-soft text-danger", bar: "from-danger to-[#ff6b6f]" },
+  violet: { icon: "bg-violet-soft text-violet", bar: "from-violet to-[#a07bff]" },
+};
+
 function KpiCard({
   label,
   value,
@@ -50,23 +59,23 @@ function KpiCard({
   label: string;
   value: string;
   icon: React.ComponentType<{ className?: string }>;
-  tone: string;
+  tone: keyof typeof KPI_TONES;
   footer: React.ReactNode;
   href: string;
 }) {
+  const t = KPI_TONES[tone];
   return (
     <Link href={href} className="group rounded-2xl focus-visible:outline-offset-4">
-      <Card className="h-full p-5 transition-shadow group-hover:shadow-md">
-        <div className="flex items-start justify-between">
-          <div>
-            <p className="text-sm font-medium text-muted">{label}</p>
-            <p className="mt-2 text-[28px] font-extrabold leading-none tracking-tight tabular-nums">{value}</p>
-          </div>
-          <span className={`flex h-11 w-11 items-center justify-center rounded-xl ${tone}`}>
-            <Icon className="h-5 w-5" />
+      <Card className="relative h-full overflow-hidden p-5 transition group-hover:-translate-y-0.5 group-hover:shadow-lg">
+        <span className={`absolute inset-x-0 top-0 h-1 bg-gradient-to-r ${t.bar}`} aria-hidden="true" />
+        <div className="flex items-center gap-3">
+          <span className={`flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl ${t.icon}`}>
+            <Icon className="h-6 w-6" />
           </span>
+          <p className="text-sm font-semibold text-muted">{label}</p>
         </div>
-        <div className="mt-4 flex flex-wrap items-center gap-2 text-xs text-muted">{footer}</div>
+        <p className="mt-4 text-[30px] font-extrabold leading-none tracking-tight tabular-nums text-navy">{value}</p>
+        <div className="mt-3 flex flex-wrap items-center gap-2 text-xs text-muted">{footer}</div>
       </Card>
     </Link>
   );
@@ -122,18 +131,23 @@ export default function DashboardPage() {
       {/* Greeting + quick actions */}
       <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
         <div>
-          <p className="text-sm font-medium text-muted">{formatDay(stats.today, { weekday: "long", day: "numeric", month: "long", year: "numeric" })}</p>
-          <h2 className="mt-1 text-2xl font-extrabold tracking-tight">Welcome back, {user?.full_name || "Admin"}</h2>
+          <h2 className="text-[26px] font-extrabold tracking-tight text-navy">Welcome back, {user?.full_name || "Admin"} 👋</h2>
+          <p className="mt-1 text-sm font-medium text-muted">
+            Here’s what’s happening today, {formatDay(stats.today, { weekday: "long", day: "numeric", month: "long", year: "numeric" })}
+          </p>
           <p className="mt-1 text-sm text-muted">
             {today.total} appointments today · {stats.doctors_on_duty} doctors on duty · {stats.pending_requests} hospital requests to review
           </p>
         </div>
-        <div className="flex flex-wrap gap-2">
-          <Button variant="secondary" onClick={() => setRegistering(true)}>
-            <UserPlus className="h-4 w-4" /> Register patient
-          </Button>
-          <Button onClick={() => setBooking(true)}>
+        <div className="flex flex-wrap gap-2" aria-label="Quick actions">
+          <Button onClick={() => setBooking(true)} className="w-full sm:w-auto">
             <CalendarPlus className="h-4 w-4" /> Book appointment
+          </Button>
+          <Link href="/ambulances" className={buttonClass("danger", "w-full sm:w-auto")}>
+            <Ambulance className="h-4 w-4" /> Dispatch ambulance
+          </Link>
+          <Button variant="success" onClick={() => setRegistering(true)} className="w-full sm:w-auto">
+            <UserPlus className="h-4 w-4" /> Register patient
           </Button>
         </div>
       </div>
@@ -144,7 +158,7 @@ export default function DashboardPage() {
           label="Total patients"
           value={stats.total_patients.toLocaleString()}
           icon={UserRound}
-          tone="bg-primary-soft text-primary"
+          tone="primary"
           href="/patients"
           footer={
             <>
@@ -157,7 +171,7 @@ export default function DashboardPage() {
           label="Appointments this month"
           value={stats.appointments_this_month.toLocaleString()}
           icon={CalendarCheck}
-          tone="bg-accent-soft text-accent"
+          tone="accent"
           href="/appointments"
           footer={
             <>
@@ -170,7 +184,7 @@ export default function DashboardPage() {
           label="Doctors on duty today"
           value={`${stats.doctors_on_duty}/${stats.total_doctors}`}
           icon={Stethoscope}
-          tone="bg-violet-soft text-violet"
+          tone="danger"
           href="/doctors"
           footer={<span>Across {stats.total_departments} departments</span>}
         />
@@ -178,7 +192,7 @@ export default function DashboardPage() {
           label="Revenue this month"
           value={formatMoney(stats.revenue_this_month)}
           icon={Wallet}
-          tone="bg-warning-soft text-warning"
+          tone="violet"
           href="/appointments"
           footer={
             <>

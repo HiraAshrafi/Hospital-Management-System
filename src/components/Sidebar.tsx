@@ -5,7 +5,6 @@ import {
   Building2,
   CalendarDays,
   ClipboardList,
-  Hospital,
   IdCard,
   LayoutDashboard,
   LayoutGrid,
@@ -20,6 +19,7 @@ import {
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 
+import { BrandLogo } from "@/components/Brand";
 import { Avatar } from "@/components/ui";
 import { useAuth } from "@/context/AuthContext";
 
@@ -66,32 +66,26 @@ export function Sidebar({ open, onClose }: { open: boolean; onClose: () => void 
 
   return (
     <>
-      {open && <div className="fixed inset-0 z-30 bg-foreground/40 lg:hidden" onClick={onClose} />}
+      {open && <div className="fixed inset-0 z-30 bg-navy-deep/50 lg:hidden" onClick={onClose} />}
       <aside
-        className={`fixed inset-y-0 left-0 z-40 flex w-[var(--sidebar-width)] flex-col border-r border-border bg-surface transition-transform lg:translate-x-0 ${
+        className={`brand-sidebar fixed inset-y-0 left-0 z-40 flex w-[var(--sidebar-width)] flex-col text-white transition-transform lg:translate-x-0 ${
           open ? "translate-x-0" : "-translate-x-full"
         }`}
       >
-        <div className="flex h-[72px] shrink-0 items-center justify-between px-5">
-          <Link href="/dashboard" className="flex items-center gap-3" onClick={onClose}>
-            <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-primary text-white shadow-[0_6px_16px_-6px_var(--primary)]">
-              <Hospital className="h-5 w-5" />
-            </span>
-            <span className="leading-tight">
-              <span className="block text-base font-extrabold tracking-tight">Hospital</span>
-              <span className="block text-[11px] font-medium text-muted">Management System</span>
-            </span>
+        <div className="flex h-[76px] shrink-0 items-center justify-between gap-2 border-b border-white/10 px-4">
+          <Link href="/dashboard" className="min-w-0 rounded-lg focus-visible:outline-white" onClick={onClose} aria-label="AshrafiTech dashboard">
+            <BrandLogo tone="dark" />
           </Link>
-          <button className="rounded-lg p-1.5 text-muted hover:bg-background lg:hidden" onClick={onClose} aria-label="Close menu">
+          <button className="rounded-lg p-1.5 text-white/70 hover:bg-white/10 hover:text-white lg:hidden" onClick={onClose} aria-label="Close menu">
             <X className="h-5 w-5" />
           </button>
         </div>
 
-        <nav className="flex-1 space-y-5 overflow-y-auto px-3 py-3">
+        <nav className="flex-1 space-y-5 overflow-y-auto px-3 py-4">
           {NAV_GROUPS.map((group) => (
             <div key={group.title}>
-              <p className="px-3 pb-1.5 text-[11px] font-semibold uppercase tracking-wider text-muted/80">{group.title}</p>
-              <div className="space-y-0.5">
+              <p className="px-3 pb-1.5 text-[11px] font-semibold uppercase tracking-wider text-white/45">{group.title}</p>
+              <div className="space-y-1">
                 {group.items.map(({ href, label, icon: Icon }) => {
                   const active = pathname === href || pathname.startsWith(`${href}/`);
                   return (
@@ -100,12 +94,13 @@ export function Sidebar({ open, onClose }: { open: boolean; onClose: () => void 
                       href={href}
                       onClick={onClose}
                       aria-current={active ? "page" : undefined}
-                      className={`group relative flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-semibold transition-colors ${
-                        active ? "bg-primary-soft text-primary" : "text-muted hover:bg-background hover:text-foreground"
+                      className={`flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-semibold transition-colors focus-visible:outline-white ${
+                        active
+                          ? "bg-gradient-to-r from-primary to-primary-bright text-white shadow-[0_8px_18px_-10px_rgba(47,124,240,0.9)]"
+                          : "text-white/75 hover:bg-white/10 hover:text-white"
                       }`}
                     >
-                      {active && <span className="absolute inset-y-2 left-0 w-1 rounded-r-full bg-primary" />}
-                      <Icon className="h-[18px] w-[18px]" />
+                      <Icon className="h-[18px] w-[18px] shrink-0" />
                       {label}
                     </Link>
                   );
@@ -115,19 +110,19 @@ export function Sidebar({ open, onClose }: { open: boolean; onClose: () => void 
           ))}
         </nav>
 
-        <div className="border-t border-border p-3">
+        <div className="border-t border-white/10 p-3">
           {user && (
-            <div className="mb-1 flex items-center gap-3 rounded-xl px-2 py-2">
+            <div className="mb-1 flex items-center gap-3 rounded-xl bg-white/5 px-2.5 py-2">
               <Avatar name={user.full_name} email={user.email} src={user.avatar} size={36} />
               <div className="min-w-0 flex-1">
                 <p className="truncate text-sm font-semibold">{user.full_name || "Admin"}</p>
-                <p className="truncate text-xs text-muted">{user.email}</p>
+                <p className="truncate text-xs text-white/60">{user.email}</p>
               </div>
             </div>
           )}
           <button
             onClick={logout}
-            className="flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-semibold text-danger hover:bg-danger-soft"
+            className="flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-semibold text-white/75 hover:bg-white/10 hover:text-white focus-visible:outline-white"
           >
             <LogOut className="h-[18px] w-[18px]" />
             Logout
