@@ -1,12 +1,14 @@
 "use client";
 
 import { CalendarPlus, HeartPulse, Mail, MapPin, Pencil, Phone, ShieldAlert, UserRound } from "lucide-react";
+import Link from "next/link";
 import { useEffect, useState } from "react";
 
 import { AppointmentFormModal } from "@/components/hms/AppointmentFormModal";
 import { AppointmentStatusBadge, AppointmentTypeBadge, BloodBadge } from "@/components/hms/badges";
 import { PatientFormModal } from "@/components/hms/PatientFormModal";
-import { Alert, Avatar, Badge, Button, Modal, Spinner } from "@/components/ui";
+import { Alert, Avatar, Badge, Button, buttonClass, Modal, Spinner } from "@/components/ui";
+import { useAuth } from "@/context/AuthContext";
 import { api, buildQuery, errorMessage, formatDate } from "@/lib/api";
 import { doctorName, formatDay, formatTime, GENDER_LABEL } from "@/lib/hms";
 import type { Appointment, Paginated, Patient } from "@/lib/types";
@@ -33,6 +35,7 @@ export function PatientDetailModal({
   onClose: () => void;
   onChanged?: () => void;
 }) {
+  const { can } = useAuth();
   const [patient, setPatient] = useState<Patient | null>(null);
   const [history, setHistory] = useState<Appointment[]>([]);
   const [error, setError] = useState("");
@@ -168,12 +171,19 @@ export function PatientDetailModal({
             </section>
 
             <div className="flex flex-wrap justify-end gap-3 border-t border-border pt-4">
-              <Button variant="secondary" onClick={() => setEditing(true)}>
-                <Pencil className="h-4 w-4" /> Edit patient
-              </Button>
-              <Button onClick={() => setBooking(true)}>
-                <CalendarPlus className="h-4 w-4" /> Book appointment
-              </Button>
+              <Link href={`/patients/${patientId}`} onClick={onClose} className={buttonClass("ghost", "mr-auto text-primary")}>
+                Open full profile →
+              </Link>
+              {can("patients.update") && (
+                <Button variant="secondary" onClick={() => setEditing(true)}>
+                  <Pencil className="h-4 w-4" /> Edit patient
+                </Button>
+              )}
+              {can("appointments.create") && (
+                <Button onClick={() => setBooking(true)}>
+                  <CalendarPlus className="h-4 w-4" /> Book appointment
+                </Button>
+              )}
             </div>
           </div>
         )}

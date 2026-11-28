@@ -1,16 +1,22 @@
 "use client";
 
-import { LayoutGrid, MapPin, Pencil, Phone, Plus, Search, Stethoscope, Trash2 } from "lucide-react";
+import { LayoutGrid, MapPin, Pencil, Phone, Plus, Search, Stethoscope, Trash2, UserPlus } from "lucide-react";
 import Link from "next/link";
 import { useCallback, useEffect, useState } from "react";
 
+import { AssignDoctorsModal, DepartmentAnalytics } from "@/components/departments/DepartmentAnalytics";
 import { DepartmentFormModal } from "@/components/hms/DepartmentFormModal";
-import { Alert, Avatar, Badge, Button, Card, ConfirmDialog, EmptyState, Input, Spinner } from "@/components/ui";
+import { Alert, Avatar, Badge, Button, Card, ConfirmDialog, EmptyState, Input, Spinner, Tabs } from "@/components/ui";
+import { useAuth } from "@/context/AuthContext";
 import { api, buildQuery, errorMessage } from "@/lib/api";
 import { doctorName } from "@/lib/hms";
 import type { Department, Paginated } from "@/lib/types";
 
 export default function DepartmentsPage() {
+  const { can } = useAuth();
+  const canManage = can("departments.manage");
+  const [tab, setTab] = useState<"list" | "analytics">("list");
+  const [assigning, setAssigning] = useState<Department | null>(null);
   const [data, setData] = useState<Department[] | null>(null);
   const [error, setError] = useState("");
   const [searchInput, setSearchInput] = useState("");
@@ -60,18 +66,27 @@ export default function DepartmentsPage() {
   return (
     <div className="space-y-4">
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-        <div className="relative sm:w-80">
-          <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted" />
-          <Input placeholder="Search departments" value={searchInput} onChange={(e) => setSearchInput(e.target.value)} className="pl-9" />
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
+          <Tabs label="Departments view" value={tab} onChange={setTab} options={[{ value: "list", label: "Departments" }, { value: "analytics", label: "Analytics" }]} />
+          {tab === "list" && (
+            <div className="relative sm:w-72">
+              <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted" />
+              <Input placeholder="Search departments" value={searchInput} onChange={(e) => setSearchInput(e.target.value)} className="pl-9" />
+            </div>
+          )}
         </div>
-        <Button onClick={() => setEditing(null)} className="self-start sm:self-auto">
-          <Plus className="h-4 w-4" /> Add department
-        </Button>
+        {canManage && (
+          <Button onClick={() => setEditing(null)} className="self-start sm:self-auto">
+            <Plus className="h-4 w-4" /> Add department
+          </Button>
+        )}
       </div>
 
       {error && <Alert>{error}</Alert>}
 
-      {!data ? (
+      {tab === "analytics" ? (
+        <DepartmentAnalytics />
+      ) : !data ? (
         <div className="flex justify-center py-20">
           <Spinner />
         </div>
@@ -127,18 +142,36 @@ export default function DepartmentsPage() {
                 >
                   <Stethoscope className="h-4 w-4" /> {d.doctor_count} doctor{d.doctor_count === 1 ? "" : "s"}
                 </Link>
-                <Button variant="secondary" className="px-3 py-2" onClick={() => setEditing(d)}>
-                  <Pencil className="h-4 w-4" /> Edit
-                </Button>
-                <Button variant="ghost" className="px-3 py-2 hover:text-danger" title="Delete" onClick={() => setDeleting(d)}>
-                  <Trash2 className="h-4 w-4" />
-                </Button>
+                {canManage && (
+                  <>
+                    <Button variant="ghost" className="px-2.5 py-2" title="Assign doctors" onClick={() => setAssigning(d)}>
+                      <UserPlus className="h-4 w-4" />
+                    </Button>
+                    <Button variant="secondary" className="px-3 py-2" onClick={() => setEditing(d)}>
+                      <Pencil className="h-4 w-4" /> Edit
+                    </Button>
+                    <Button variant="ghost" className="px-2.5 py-2 hover:text-danger" title="Delete" onClick={() => setDeleting(d)}>
+                      <Trash2 className="h-4 w-4" />
+                    </Button>
+                  </>
+                )}
               </div>
             </Card>
           ))}
         </div>
       )}
 
+      {assigning && (
+        <AssignDoctorsModal
+          departmentId={assigning.id}
+          departmentName={assigning.name}
+          onClose={() => setAssigning(null)}
+          onSaved={() => {
+            setAssigning(null);
+            reload();
+          }}
+        />
+      )}
       {editing !== undefined && (
         <DepartmentFormModal
           key={editing?.id ?? "new"}

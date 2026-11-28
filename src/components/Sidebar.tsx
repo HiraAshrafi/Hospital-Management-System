@@ -2,18 +2,27 @@
 
 import {
   Ambulance,
+  BadgeCheck,
+  BedDouble,
+  Building,
   Building2,
   CalendarDays,
   ClipboardList,
+  History,
   IdCard,
   LayoutDashboard,
   LayoutGrid,
+  LayoutPanelTop,
   LogOut,
   Map as MapIcon,
+  ReceiptText,
   Settings,
+  ShieldCheck,
   Stethoscope,
+  Tags,
   UserRound,
   Users,
+  Wallet,
   X,
 } from "lucide-react";
 import Link from "next/link";
@@ -23,36 +32,63 @@ import { BrandLogo } from "@/components/Brand";
 import { Avatar } from "@/components/ui";
 import { useAuth } from "@/context/AuthContext";
 
-export const NAV_GROUPS = [
+export interface NavItem {
+  href: string;
+  label: string;
+  icon: React.ComponentType<{ className?: string }>;
+  /** Permission needed to see and open the page (any of, for an array). Empty = every staff member. */
+  perm?: string | string[];
+}
+
+export const NAV_GROUPS: { title: string; items: NavItem[] }[] = [
   {
     title: "Overview",
     items: [
-      { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
-      { href: "/map", label: "Map", icon: MapIcon },
-      { href: "/ambulances", label: "Ambulances", icon: Ambulance },
-      { href: "/ambulance-drivers", label: "Drivers & Fares", icon: IdCard },
+      { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard, perm: "dashboard.view" },
+      { href: "/map", label: "Map", icon: MapIcon, perm: "dashboard.view" },
+      { href: "/ambulances", label: "Ambulances", icon: Ambulance, perm: "ambulances.view" },
+      { href: "/ambulance-drivers", label: "Drivers & Fares", icon: IdCard, perm: "ambulances.view" },
     ],
   },
   {
     title: "Clinical",
     items: [
-      { href: "/appointments", label: "Appointments", icon: CalendarDays },
-      { href: "/patients", label: "Patients", icon: UserRound },
-      { href: "/doctors", label: "Doctors", icon: Stethoscope },
-      { href: "/departments", label: "Departments", icon: LayoutGrid },
+      { href: "/appointments", label: "Appointments", icon: CalendarDays, perm: "appointments.view" },
+      { href: "/patients", label: "Patients", icon: UserRound, perm: "patients.view" },
+      { href: "/doctors", label: "Doctors", icon: Stethoscope, perm: "doctors.view" },
+      { href: "/departments", label: "Departments", icon: LayoutGrid, perm: "departments.view" },
+    ],
+  },
+  {
+    title: "Inpatient",
+    items: [
+      { href: "/admissions", label: "Admissions", icon: BedDouble, perm: "admissions.view" },
+      { href: "/beds", label: "Bed Board", icon: LayoutPanelTop, perm: "admissions.view" },
+      { href: "/wards", label: "Wards & Beds", icon: Building, perm: "wards.manage" },
+    ],
+  },
+  {
+    title: "Finance",
+    items: [
+      { href: "/billing", label: "Billing", icon: ReceiptText, perm: "billing.view" },
+      { href: "/payments", label: "Payments", icon: Wallet, perm: "billing.view" },
+      { href: "/price-list", label: "Price List", icon: Tags, perm: "billing.view" },
     ],
   },
   {
     title: "Hospital network",
     items: [
-      { href: "/hospitals", label: "Hospitals", icon: Building2 },
-      { href: "/requests", label: "Hospital Requests", icon: ClipboardList },
+      { href: "/hospitals", label: "Hospitals", icon: Building2, perm: "hospitals.view" },
+      { href: "/requests", label: "Hospital Requests", icon: ClipboardList, perm: "hospitals.view" },
     ],
   },
   {
     title: "Administration",
     items: [
-      { href: "/users", label: "Users", icon: Users },
+      { href: "/staff", label: "Staff", icon: BadgeCheck, perm: "staff.view" },
+      { href: "/roles", label: "Roles & Permissions", icon: ShieldCheck, perm: "staff.view" },
+      { href: "/users", label: "App Users", icon: Users, perm: "staff.view" },
+      { href: "/activity", label: "Activity Log", icon: History, perm: "audit.view" },
       { href: "/settings", label: "Settings", icon: Settings },
     ],
   },
@@ -62,7 +98,7 @@ export const NAV_ITEMS = NAV_GROUPS.flatMap((group) => group.items);
 
 export function Sidebar({ open, onClose }: { open: boolean; onClose: () => void }) {
   const pathname = usePathname();
-  const { user, logout } = useAuth();
+  const { user, logout, can } = useAuth();
 
   return (
     <>
@@ -82,7 +118,9 @@ export function Sidebar({ open, onClose }: { open: boolean; onClose: () => void 
         </div>
 
         <nav className="flex-1 space-y-5 overflow-y-auto px-3 py-4">
-          {NAV_GROUPS.map((group) => (
+          {NAV_GROUPS.map((group) => ({ ...group, items: group.items.filter((item) => can(item.perm)) }))
+            .filter((group) => group.items.length > 0)
+            .map((group) => (
             <div key={group.title}>
               <p className="px-3 pb-1.5 text-[11px] font-semibold uppercase tracking-wider text-white/45">{group.title}</p>
               <div className="space-y-1">
@@ -116,7 +154,7 @@ export function Sidebar({ open, onClose }: { open: boolean; onClose: () => void 
               <Avatar name={user.full_name} email={user.email} src={user.avatar} size={36} />
               <div className="min-w-0 flex-1">
                 <p className="truncate text-sm font-semibold">{user.full_name || "Admin"}</p>
-                <p className="truncate text-xs text-white/60">{user.email}</p>
+                <p className="truncate text-xs text-white/60">{user.role_name || user.email}</p>
               </div>
             </div>
           )}

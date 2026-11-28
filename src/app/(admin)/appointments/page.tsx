@@ -1,12 +1,15 @@
 "use client";
 
-import { CalendarDays, CalendarPlus, Check, Pencil, Search, Trash2, X } from "lucide-react";
+import { CalendarClock, CalendarDays, CalendarPlus, Check, LayoutList, Pencil, Search, Trash2, UserX, X } from "lucide-react";
+import Link from "next/link";
 import { useCallback, useEffect, useState } from "react";
 
+import { AppointmentCalendar } from "@/components/appointments/AppointmentCalendar";
+import { CancelModal, RescheduleModal } from "@/components/appointments/AppointmentActions";
 import { AppointmentFormModal } from "@/components/hms/AppointmentFormModal";
 import { AppointmentStatusBadge, AppointmentTypeBadge } from "@/components/hms/badges";
-import { PatientDetailModal } from "@/components/hms/PatientDetailModal";
-import { Alert, Avatar, Button, Card, ConfirmDialog, EmptyState, Input, Pagination, Select, Spinner, Tabs } from "@/components/ui";
+import { Alert, Avatar, Badge, Button, Card, ConfirmDialog, EmptyState, Input, Pagination, Select, Spinner, Tabs } from "@/components/ui";
+import { useAuth } from "@/context/AuthContext";
 import { api, buildQuery, errorMessage } from "@/lib/api";
 import { APPOINTMENT_STATUS, doctorName, formatDay, formatMoney, formatTime } from "@/lib/hms";
 import type { Appointment, AppointmentStatus, Department, Doctor, Paginated } from "@/lib/types";
@@ -21,6 +24,12 @@ const WHEN_TABS: { value: When; label: string }[] = [
 ];
 
 export default function AppointmentsPage() {
+  const { user, can } = useAuth();
+  const isDoctor = Boolean(user?.doctor_id);
+  const [view, setView] = useState<"list" | "calendar">("list");
+  const [mine, setMine] = useState(isDoctor && user?.role === "doctor");
+  const [rescheduling, setRescheduling] = useState<Appointment | null>(null);
+  const [cancelling, setCancelling] = useState<Appointment | null>(null);
   const [data, setData] = useState<Paginated<Appointment> | null>(null);
   const [error, setError] = useState("");
   const [page, setPage] = useState(1);
@@ -36,7 +45,6 @@ export default function AppointmentsPage() {
 
   const [editing, setEditing] = useState<Appointment | null | undefined>(undefined);
   const [deleting, setDeleting] = useState<Appointment | null>(null);
-  const [viewingPatient, setViewingPatient] = useState<number | null>(null);
   const [busyId, setBusyId] = useState<number | null>(null);
 
   useEffect(() => {
@@ -63,7 +71,7 @@ export default function AppointmentsPage() {
     let cancelled = false;
     // Today and upcoming read soonest-first; past and all read newest-first.
     const ordering = when === "today" || when === "upcoming" ? "date,time" : "-date,-time";
-    const query = buildQuery({ page, page_size: PAGE_SIZE, when, search, status, doctor, department, ordering });
+    const query = buildQuery({ page, page_size: PAGE_SIZE, when, search, status, doctor, department, ordering, mine: mine || undefined });
     api<Paginated<Appointment>>(`/appointments/${query}`)
       .then((res) => {
         if (!cancelled) {
@@ -75,7 +83,7 @@ export default function AppointmentsPage() {
     return () => {
       cancelled = true;
     };
-  }, [page, when, search, status, doctor, department, reloadKey]);
+  }, [page, when, search, status, doctor, department, mine, reloadKey]);
 
   const reload = useCallback(() => setReloadKey((k) => k + 1), []);
   const resetPage = <T,>(setter: (v: T) => void) => (v: T) => {
@@ -114,10 +122,33 @@ export default function AppointmentsPage() {
   return (
     <div className="space-y-4">
       <div className="flex flex-col gap-3 xl:flex-row xl:items-center xl:justify-between">
-        <Tabs value={when} options={WHEN_TABS} onChange={resetPage(setWhen)} label="When" />
-        <Button onClick={() => setEditing(null)} className="self-start xl:self-auto">
-          <CalendarPlus className="h-4 w-4" /> Book appointment
-        </Button>
+        <div className="flex flex-wrap items-center gap-3">
+          <div className="inline-flex rounded-xl border border-border bg-surface p-1" role="tablist" aria-label="View">
+            {([["list", "List", LayoutList], ["calendar", "Calendar", CalendarDays]] as const).map(([v, label, Icon]) => (
+              <button
+                key={v}
+                role="tab"
+                aria-selected={view === v}
+                onClick={() => setView(v)}
+                className={`inline-flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-sm font-semibold ${view === v ? "bg-navy text-white" : "text-muted hover:text-foreground"}`}
+              >
+                <Icon className="h-4 w-4" /> {label}
+              </button>
+            ))}
+          </div>
+          {view === "list" && <Tabs value={when} options={WHEN_TABS} onChange={resetPage(setWhen)} label="When" />}
+          {isDoctor && (
+            <label className="flex items-center gap-2 text-sm font-semibold">
+              <input type="checkbox" checked={mine} onChange={(e) => { setMine(e.target.checked); setPage(1); }} className="h-4 w-4 accent-[var(--primary)]" />
+              My appointments
+            </label>
+          )}
+        </div>
+        {can("appointments.create") && (
+          <Button onClick={() => setEditing(null)} className="self-start xl:self-auto">
+            <CalendarPlus className="h-4 w-4" /> Book appointment
+          </Button>
+        )}
       </div>
 
       <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
@@ -155,6 +186,9 @@ export default function AppointmentsPage() {
 
       {error && <Alert>{error}</Alert>}
 
+      {view === "calendar" ? (
+        <AppointmentCalendar filters={{ search, status, doctor, department, mine: mine || undefined }} />
+      ) : (
       <Card className="overflow-hidden">
         {!data ? (
           <div className="flex justify-center py-20">
@@ -176,7 +210,7 @@ export default function AppointmentsPage() {
                     <th className="w-[130px] px-5 py-3 font-semibold">Type</th>
                     <th className="w-[100px] px-5 py-3 font-semibold">Fee</th>
                     <th className="w-[120px] px-5 py-3 font-semibold">Status</th>
-                    <th className="w-[160px] px-5 py-3 text-right font-semibold">Actions</th>
+                    <th className="w-[210px] px-5 py-3 text-right font-semibold">Actions</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-border">
@@ -187,7 +221,7 @@ export default function AppointmentsPage() {
                         <p className="text-xs text-muted">{formatDay(a.date, { weekday: "short", day: "2-digit", month: "short" })}</p>
                       </td>
                       <td className="px-5 py-3">
-                        <button className="flex max-w-full items-center gap-3 text-left" onClick={() => setViewingPatient(a.patient)}>
+                        <Link href={`/patients/${a.patient}`} className="flex max-w-full items-center gap-3 text-left">
                           <Avatar name={a.patient_info.full_name} email={a.patient_info.mrn} size={34} />
                           <span className="min-w-0">
                             <span className="block truncate font-semibold hover:text-primary">{a.patient_info.full_name}</span>
@@ -196,7 +230,7 @@ export default function AppointmentsPage() {
                               {a.reason && ` · ${a.reason}`}
                             </span>
                           </span>
-                        </button>
+                        </Link>
                       </td>
                       <td className="px-5 py-3">
                         <p className="truncate font-medium">{doctorName(a.doctor_info.full_name)}</p>
@@ -208,23 +242,35 @@ export default function AppointmentsPage() {
                       <td className="px-5 py-3 tabular-nums">{formatMoney(a.fee)}</td>
                       <td className="px-5 py-3">
                         <AppointmentStatusBadge status={a.status} />
+                        {a.reschedule_count > 0 && a.status === "scheduled" && <p className="mt-1"><Badge tone="warning">Moved ×{a.reschedule_count}</Badge></p>}
+                        {a.cancel_reason && <p className="mt-1 truncate text-xs text-muted" title={a.cancel_reason}>{a.cancel_reason}</p>}
                       </td>
                       <td className="px-5 py-3">
                         <div className="flex justify-end gap-1">
-                          {a.status === "scheduled" && (
+                          {a.status === "scheduled" && can("appointments.update") && (
                             <>
                               <Button variant="ghost" className="px-2 py-1.5 text-success" title="Mark completed" loading={busyId === a.id} onClick={() => setAppointmentStatus(a, "completed")}>
                                 {busyId !== a.id && <Check className="h-4 w-4" />}
                               </Button>
-                              <Button variant="ghost" className="px-2 py-1.5 hover:text-danger" title="Cancel appointment" disabled={busyId === a.id} onClick={() => setAppointmentStatus(a, "cancelled")}>
-                                <X className="h-4 w-4" />
+                              <Button variant="ghost" className="px-2 py-1.5 text-warning" title="Mark no-show" disabled={busyId === a.id} onClick={() => setAppointmentStatus(a, "no_show")}>
+                                <UserX className="h-4 w-4" />
+                              </Button>
+                              <Button variant="ghost" className="px-2 py-1.5" title="Reschedule" onClick={() => setRescheduling(a)}>
+                                <CalendarClock className="h-4 w-4" />
                               </Button>
                             </>
                           )}
-                          <Button variant="ghost" className="px-2 py-1.5" title="Edit" onClick={() => setEditing(a)}>
-                            <Pencil className="h-4 w-4" />
-                          </Button>
-                          {a.status !== "scheduled" && (
+                          {a.status === "scheduled" && can("appointments.cancel") && (
+                            <Button variant="ghost" className="px-2 py-1.5 hover:text-danger" title="Cancel appointment" onClick={() => setCancelling(a)}>
+                              <X className="h-4 w-4" />
+                            </Button>
+                          )}
+                          {can("appointments.update") && (
+                            <Button variant="ghost" className="px-2 py-1.5" title="Edit" onClick={() => setEditing(a)}>
+                              <Pencil className="h-4 w-4" />
+                            </Button>
+                          )}
+                          {a.status !== "scheduled" && can("appointments.delete") && (
                             <Button variant="ghost" className="px-2 py-1.5 hover:text-danger" title="Delete" onClick={() => setDeleting(a)}>
                               <Trash2 className="h-4 w-4" />
                             </Button>
@@ -240,6 +286,7 @@ export default function AppointmentsPage() {
           </>
         )}
       </Card>
+      )}
 
       {editing !== undefined && (
         <AppointmentFormModal
@@ -252,8 +299,25 @@ export default function AppointmentsPage() {
           }}
         />
       )}
-      {viewingPatient !== null && (
-        <PatientDetailModal key={viewingPatient} patientId={viewingPatient} onClose={() => setViewingPatient(null)} onChanged={reload} />
+      {rescheduling && (
+        <RescheduleModal
+          appointment={rescheduling}
+          onClose={() => setRescheduling(null)}
+          onSaved={() => {
+            setRescheduling(null);
+            reload();
+          }}
+        />
+      )}
+      {cancelling && (
+        <CancelModal
+          appointment={cancelling}
+          onClose={() => setCancelling(null)}
+          onSaved={(updated) => {
+            setCancelling(null);
+            setData((d) => d && { ...d, results: d.results.map((x) => (x.id === updated.id ? updated : x)) });
+          }}
+        />
       )}
       <ConfirmDialog
         open={deleting !== null}

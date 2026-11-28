@@ -5,7 +5,8 @@ import { useState } from "react";
 import { Alert, Button, Field, Input, Modal, Select, Textarea } from "@/components/ui";
 import { api, errorMessage } from "@/lib/api";
 import { BLOOD_GROUPS } from "@/lib/hms";
-import type { BloodGroup, Gender, Patient } from "@/lib/types";
+import { useAuth } from "@/context/AuthContext";
+import type { BloodGroup, Gender, MaritalStatus, Patient } from "@/lib/types";
 
 interface FormState {
   first_name: string;
@@ -14,10 +15,15 @@ interface FormState {
   date_of_birth: string;
   blood_group: BloodGroup;
   phone: string;
+  alternate_phone: string;
   email: string;
   address: string;
   city: string;
+  national_id: string;
+  marital_status: MaritalStatus;
+  occupation: string;
   emergency_contact_name: string;
+  emergency_contact_relation: string;
   emergency_contact_phone: string;
   allergies: string;
   medical_notes: string;
@@ -32,10 +38,15 @@ function initialState(p: Patient | null): FormState {
     date_of_birth: p?.date_of_birth ?? "",
     blood_group: p?.blood_group ?? "",
     phone: p?.phone ?? "",
+    alternate_phone: p?.alternate_phone ?? "",
     email: p?.email ?? "",
     address: p?.address ?? "",
     city: p?.city ?? "",
+    national_id: p?.national_id ?? "",
+    marital_status: p?.marital_status ?? "",
+    occupation: p?.occupation ?? "",
     emergency_contact_name: p?.emergency_contact_name ?? "",
+    emergency_contact_relation: p?.emergency_contact_relation ?? "",
     emergency_contact_phone: p?.emergency_contact_phone ?? "",
     allergies: p?.allergies ?? "",
     medical_notes: p?.medical_notes ?? "",
@@ -58,11 +69,13 @@ export function PatientFormModal({
   onSaved: (patient: Patient) => void;
 }) {
   const isEdit = patient !== null;
+  const { can } = useAuth();
+  const medical = can("patients.view_medical");
   const [form, setForm] = useState<FormState>(() => initialState(patient));
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
   const set = <K extends keyof FormState>(key: K, value: FormState[K]) => setForm((f) => ({ ...f, [key]: value }));
-  const text = (key: Exclude<keyof FormState, "is_active" | "gender" | "blood_group">) => ({
+  const text = (key: Exclude<keyof FormState, "is_active" | "gender" | "blood_group" | "marital_status">) => ({
     value: form[key],
     onChange: (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => set(key, e.target.value),
   });
@@ -71,7 +84,11 @@ export function PatientFormModal({
     e.preventDefault();
     setSaving(true);
     setError("");
-    const body = { ...form, date_of_birth: form.date_of_birth || null };
+    const body: Record<string, unknown> = { ...form, date_of_birth: form.date_of_birth || null };
+    if (!medical) {
+      delete body.allergies;
+      delete body.medical_notes;
+    }
     try {
       const saved = isEdit
         ? await api<Patient>(`/patients/${patient.id}/`, { method: "PATCH", body })
@@ -117,12 +134,30 @@ export function PatientFormModal({
               ))}
             </Select>
           </Field>
+          <Field label="National ID / birth certificate no.">
+            <Input {...text("national_id")} />
+          </Field>
+          <Field label="Marital status">
+            <Select value={form.marital_status} onChange={(e) => set("marital_status", e.target.value as MaritalStatus)}>
+              <option value="">Not set</option>
+              <option value="single">Single</option>
+              <option value="married">Married</option>
+              <option value="divorced">Divorced</option>
+              <option value="widowed">Widowed</option>
+            </Select>
+          </Field>
+          <Field label="Occupation">
+            <Input {...text("occupation")} />
+          </Field>
         </div>
 
         <Section>Contact</Section>
         <div className="grid gap-4 sm:grid-cols-2">
           <Field label="Phone">
             <Input {...text("phone")} type="tel" placeholder="+880 1XXX XXXXXX" />
+          </Field>
+          <Field label="Alternate phone">
+            <Input {...text("alternate_phone")} type="tel" />
           </Field>
           <Field label="Email">
             <Input {...text("email")} type="email" />
@@ -133,21 +168,33 @@ export function PatientFormModal({
           <Field label="City">
             <Input {...text("city")} />
           </Field>
-          <Field label="Emergency contact name">
+        </div>
+
+        <Section>Emergency contact</Section>
+        <div className="grid gap-4 sm:grid-cols-3">
+          <Field label="Name">
             <Input {...text("emergency_contact_name")} />
           </Field>
-          <Field label="Emergency contact phone">
+          <Field label="Relation">
+            <Input {...text("emergency_contact_relation")} placeholder="e.g. Spouse" />
+          </Field>
+          <Field label="Phone">
             <Input {...text("emergency_contact_phone")} type="tel" />
           </Field>
         </div>
 
-        <Section>Medical</Section>
-        <Field label="Allergies">
-          <Textarea {...text("allergies")} rows={2} placeholder="e.g. Penicillin" />
-        </Field>
-        <Field label="Medical notes">
-          <Textarea {...text("medical_notes")} placeholder="Conditions, ongoing medication, history" />
-        </Field>
+        {medical && (
+          <>
+            <Section>Medical notes</Section>
+            <Field label="Allergies (as reported by the patient)">
+              <Textarea {...text("allergies")} rows={2} placeholder="e.g. Penicillin" />
+            </Field>
+            <Field label="Medical notes">
+              <Textarea {...text("medical_notes")} placeholder="Ongoing medication, anything staff should know" />
+            </Field>
+            <p className="text-xs text-muted">Structured allergies, conditions, history and documents are on the patient’s profile page.</p>
+          </>
+        )}
 
         {isEdit && (
           <label className="flex items-center gap-2 text-sm">

@@ -8,6 +8,8 @@ import type { LoginResponse, Profile } from "@/lib/types";
 interface AuthContextValue {
   user: Profile | null;
   loading: boolean;
+  /** True when the user's role grants the permission (or any of them, for an array). Superusers pass everything. */
+  can: (perm: string | string[] | undefined) => boolean;
   login: (email: string, password: string) => Promise<void>;
   logout: () => Promise<void>;
   setUser: (user: Profile) => void;
@@ -65,7 +67,18 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     setUser(null);
   }, []);
 
-  const value = useMemo(() => ({ user, loading, login, logout, setUser }), [user, loading, login, logout]);
+  const can = useCallback(
+    (perm: string | string[] | undefined) => {
+      if (!perm || (Array.isArray(perm) && perm.length === 0)) return true;
+      if (!user) return false;
+      if (user.is_superuser) return true;
+      const held = user.permissions ?? [];
+      return Array.isArray(perm) ? perm.some((p) => held.includes(p)) : held.includes(perm);
+    },
+    [user],
+  );
+
+  const value = useMemo(() => ({ user, loading, can, login, logout, setUser }), [user, loading, can, login, logout]);
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 }

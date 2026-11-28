@@ -5,11 +5,11 @@ import { useEffect, useMemo, useState } from "react";
 
 import { Alert, Avatar, Button, Field, Input, Modal, Select, Textarea } from "@/components/ui";
 import { api, buildQuery, errorMessage } from "@/lib/api";
-import { APPOINTMENT_STATUS, APPOINTMENT_TYPES, daysLabel, doctorName, formatMoney, formatShift } from "@/lib/hms";
-import type { Appointment, AppointmentStatus, AppointmentType, Doctor, Paginated, PatientMini } from "@/lib/types";
+import { APPOINTMENT_STATUS, APPOINTMENT_TYPES, doctorName, formatMoney, formatTime, scheduleLabel } from "@/lib/hms";
+import type { Appointment, AppointmentStatus, AppointmentType, Availability, Doctor, Paginated, PatientMini } from "@/lib/types";
 
 /** Search-as-you-type patient chooser. */
-function PatientPicker({ value, onChange }: { value: PatientMini | null; onChange: (p: PatientMini | null) => void }) {
+export function PatientPicker({ value, onChange }: { value: PatientMini | null; onChange: (p: PatientMini | null) => void }) {
   const [query, setQuery] = useState("");
   const [results, setResults] = useState<PatientMini[]>([]);
 
@@ -101,6 +101,20 @@ export function AppointmentFormModal({
   const [fee, setFee] = useState(appointment ? String(Number(appointment.fee)) : "");
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
+  const [availability, setAvailability] = useState<Availability | null>(null);
+
+  // Free slots for the chosen doctor and day (weekly schedule, leave and existing bookings).
+  useEffect(() => {
+    if (!doctorId || !date) return;
+    let cancelled = false;
+    api<Availability>(`/doctors/${doctorId}/availability/${buildQuery({ date })}`)
+      .then((res) => !cancelled && setAvailability(res))
+      .catch(() => !cancelled && setAvailability(null));
+    return () => {
+      cancelled = true;
+    };
+  }, [doctorId, date]);
+  const slots = availability && doctorId && date && availability.date === date ? availability : null;
 
   useEffect(() => {
     api<Paginated<Doctor>>(`/doctors/${buildQuery({ page_size: 100 })}`)
@@ -168,7 +182,10 @@ export function AppointmentFormModal({
         {doctor && (
           <p className="-mt-2 flex items-start gap-2 rounded-xl bg-primary-soft px-3 py-2 text-xs text-primary">
             <Info className="mt-px h-3.5 w-3.5 shrink-0" />
-            Works {daysLabel(doctor.available_days)} · {formatShift(doctor.shift_start, doctor.shift_end)} · Fee {formatMoney(doctor.consultation_fee)}
+            <span>
+              {scheduleLabel(doctor.schedules ?? [])} · Fee {formatMoney(doctor.consultation_fee)}
+              {doctor.on_leave_today && <strong className="ml-1 text-danger">· On leave today</strong>}
+            </span>
           </p>
         )}
 
@@ -207,6 +224,40 @@ export function AppointmentFormModal({
             />
           </Field>
         </div>
+
+        {slots && (
+          <div className="-mt-1 rounded-xl border border-border p-3">
+            {!slots.works ? (
+              <p className="text-sm text-danger">{slots.reason}. Choose another day.</p>
+            ) : (
+              <>
+                <p className="mb-2 text-xs font-semibold text-muted">
+                  Free slots · {slots.slots.filter((s) => s.available).length} of {slots.slots.length} ({slots.slot_minutes} min each)
+                </p>
+                <div className="flex max-h-40 flex-wrap gap-1.5 overflow-y-auto">
+                  {slots.slots.map((s) => (
+                    <button
+                      key={s.time}
+                      type="button"
+                      disabled={!s.available && s.time !== appointment?.time.slice(0, 5)}
+                      onClick={() => setTime(s.time)}
+                      className={`rounded-lg border px-2.5 py-1 text-xs font-semibold tabular-nums transition-colors ${
+                        time === s.time
+                          ? "border-primary bg-primary text-white"
+                          : s.available
+                            ? "border-border hover:border-primary hover:text-primary"
+                            : "cursor-not-allowed border-transparent bg-surface-muted text-muted line-through"
+                      }`}
+                      title={s.booked ? "Booked" : s.available ? "Free" : "Past"}
+                    >
+                      {formatTime(s.time)}
+                    </button>
+                  ))}
+                </div>
+              </>
+            )}
+          </div>
+        )}
 
         {isEdit && (
           <Field label="Status">

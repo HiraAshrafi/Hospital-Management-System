@@ -149,3 +149,44 @@ export function initials(name: string, fallback = "?"): string {
   if (!parts.length) return fallback.slice(0, 1).toUpperCase();
   return (parts[0][0] + (parts[1]?.[0] ?? "")).toUpperCase();
 }
+
+/**
+ * Fetch a protected file (PDF, image, export) with the user's token and open or save it.
+ * `mode: "open"` shows it in a new tab (PDF/images); "download" saves it with `filename`.
+ */
+export async function openProtectedFile(path: string, { mode = "open", filename }: { mode?: "open" | "download"; filename?: string } = {}) {
+  const get = () => fetch(`${API_URL}${path}`, { headers: { Authorization: `Bearer ${tokens.access() ?? ""}` } });
+  // Open the tab first (inside the click) so pop-up blockers allow it, then fill it once the file arrives.
+  const tab = mode === "open" ? window.open("", "_blank") : null;
+  let res = await get();
+  if (res.status === 401 && tokens.refresh()) {
+    refreshing ??= refreshAccessToken().finally(() => {
+      refreshing = null;
+    });
+    if (await refreshing) res = await get();
+  }
+  if (!res.ok) {
+    tab?.close();
+    const data = await res.json().catch(() => null);
+    throw new ApiError(res.status, data);
+  }
+  const blob = await res.blob();
+  const url = URL.createObjectURL(blob);
+  if (tab) {
+    tab.location.href = url;
+  } else {
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = filename ?? "download";
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+  }
+  setTimeout(() => URL.revokeObjectURL(url), 60_000);
+}
+
+export function formatBytes(bytes: number): string {
+  if (bytes < 1024) return `${bytes} B`;
+  if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(0)} KB`;
+  return `${(bytes / 1024 / 1024).toFixed(1)} MB`;
+}

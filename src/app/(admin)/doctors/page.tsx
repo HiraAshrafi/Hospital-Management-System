@@ -1,17 +1,20 @@
 "use client";
 
 import { CalendarClock, Clock, GraduationCap, Mail, Pencil, Phone, Plus, Search, Stethoscope, Trash2 } from "lucide-react";
+import Link from "next/link";
 import { useCallback, useEffect, useState } from "react";
 
 import { DoctorFormModal } from "@/components/hms/DoctorFormModal";
-import { Alert, Avatar, Badge, Button, Card, ConfirmDialog, EmptyState, Input, Pagination, Select, Spinner } from "@/components/ui";
+import { Alert, Avatar, Badge, Button, buttonClass, Card, ConfirmDialog, EmptyState, Input, Pagination, Select, Spinner } from "@/components/ui";
+import { useAuth } from "@/context/AuthContext";
 import { api, buildQuery, errorMessage } from "@/lib/api";
-import { doctorName, formatMoney, formatShift, WEEKDAYS } from "@/lib/hms";
+import { doctorName, formatMoney, formatTime, scheduleLabel, WEEKDAYS } from "@/lib/hms";
 import type { Department, Doctor, Paginated } from "@/lib/types";
 
 const PAGE_SIZE = 12;
 
 export default function DoctorsPage() {
+  const { can } = useAuth();
   const [data, setData] = useState<Paginated<Doctor> | null>(null);
   const [error, setError] = useState("");
   const [page, setPage] = useState(1);
@@ -95,9 +98,11 @@ export default function DoctorsPage() {
             <option value="false">Unavailable</option>
           </Select>
         </div>
-        <Button onClick={() => setEditing(null)} className="self-start lg:self-auto">
-          <Plus className="h-4 w-4" /> Add doctor
-        </Button>
+        {can("doctors.manage") && (
+          <Button onClick={() => setEditing(null)} className="self-start lg:self-auto">
+            <Plus className="h-4 w-4" /> Add doctor
+          </Button>
+        )}
       </div>
 
       {error && <Alert>{error}</Alert>}
@@ -120,11 +125,15 @@ export default function DoctorsPage() {
                 <div className="flex items-start gap-3">
                   <Avatar name={d.full_name} email={d.email || d.full_name} size={52} />
                   <div className="min-w-0 flex-1">
-                    <p className="truncate font-bold">{doctorName(d.full_name)}</p>
+                    <Link href={`/doctors/${d.id}`} className="block truncate font-bold hover:text-primary">{doctorName(d.full_name)}</Link>
                     <p className="truncate text-sm text-primary">{d.specialization || "General practice"}</p>
                     <p className="truncate text-xs text-muted">{d.department_name || "No department"}</p>
                   </div>
-                  <Badge tone={d.is_active ? "success" : "neutral"}>{d.is_active ? "Available" : "Off"}</Badge>
+                  {d.on_leave_today ? (
+                    <Badge tone="warning">On leave</Badge>
+                  ) : (
+                    <Badge tone={d.is_active ? "success" : "neutral"}>{d.is_active ? "Available" : "Off"}</Badge>
+                  )}
                 </div>
 
                 <div className="mt-4 space-y-2 text-sm text-muted">
@@ -135,7 +144,7 @@ export default function DoctorsPage() {
                     </span>
                   </p>
                   <p className="flex items-center gap-2">
-                    <Clock className="h-4 w-4 shrink-0" /> {formatShift(d.shift_start, d.shift_end)}
+                    <Clock className="h-4 w-4 shrink-0" /> <span className="truncate" title={scheduleLabel(d.schedules ?? [])}>{scheduleLabel(d.schedules ?? [])}</span>
                   </p>
                   {d.phone && (
                     <p className="flex items-center gap-2 truncate">
@@ -151,11 +160,12 @@ export default function DoctorsPage() {
 
                 <div className="mt-4 flex gap-1" aria-label="Working days">
                   {WEEKDAYS.map((w) => {
-                    const on = d.available_days.length === 0 || d.available_days.includes(w.value);
+                    const row = d.schedules?.find((s) => s.weekday === w.value && s.is_active);
+                    const on = d.schedules?.length ? Boolean(row) : d.available_days.length === 0 || d.available_days.includes(w.value);
                     return (
                       <span
                         key={w.value}
-                        title={`${w.label}: ${on ? "working" : "off"}`}
+                        title={`${w.label}: ${row ? `${formatTime(row.start_time)} – ${formatTime(row.end_time)}` : on ? "working" : "off"}`}
                         className={`flex-1 rounded-md py-1 text-center text-[11px] font-semibold ${on ? "bg-primary-soft text-primary" : "bg-background text-muted/60 line-through"}`}
                       >
                         {w.label.slice(0, 2)}
@@ -178,12 +188,19 @@ export default function DoctorsPage() {
                 </div>
 
                 <div className="mt-4 flex gap-2">
-                  <Button variant="secondary" className="flex-1 py-2" onClick={() => setEditing(d)}>
-                    <Pencil className="h-4 w-4" /> Edit
-                  </Button>
-                  <Button variant="ghost" className="px-3 py-2 hover:text-danger" title="Delete" onClick={() => setDeleting(d)}>
-                    <Trash2 className="h-4 w-4" />
-                  </Button>
+                  <Link href={`/doctors/${d.id}`} className={buttonClass("secondary", "flex-1 py-2")}>
+                    Profile
+                  </Link>
+                  {can("doctors.manage") && (
+                    <Button variant="secondary" className="px-3 py-2" title="Edit" onClick={() => setEditing(d)}>
+                      <Pencil className="h-4 w-4" />
+                    </Button>
+                  )}
+                  {can("doctors.delete") && (
+                    <Button variant="ghost" className="px-3 py-2 hover:text-danger" title="Archive" onClick={() => setDeleting(d)}>
+                      <Trash2 className="h-4 w-4" />
+                    </Button>
+                  )}
                 </div>
               </Card>
             ))}
@@ -207,14 +224,14 @@ export default function DoctorsPage() {
       )}
       <ConfirmDialog
         open={deleting !== null}
-        title="Delete doctor"
+        title="Archive doctor"
         message={
           <>
-            Delete <strong>{deleting && doctorName(deleting.full_name)}</strong>? Doctors with appointment history can’t be deleted — mark them unavailable
-            instead.
+            Archive <strong>{deleting && doctorName(deleting.full_name)}</strong>? Their appointment history is kept. Doctors with upcoming appointments
+            can’t be archived until those are moved or cancelled.
           </>
         }
-        confirmLabel="Delete"
+        confirmLabel="Archive"
         loading={deleteBusy}
         onConfirm={confirmDelete}
         onClose={() => setDeleting(null)}

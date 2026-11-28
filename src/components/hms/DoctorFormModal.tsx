@@ -3,10 +3,12 @@
 import { useEffect, useState } from "react";
 
 import { CoordinateFields, coordinateBody } from "@/components/hms/CoordinateFields";
+import { ScheduleEditor, schedulesFromWeek, weekFromSchedules, type WeekState } from "@/components/hms/ScheduleEditor";
 import { Alert, Button, Field, Input, Modal, Select, Textarea } from "@/components/ui";
+import { useAuth } from "@/context/AuthContext";
 import { api, buildQuery, errorMessage } from "@/lib/api";
-import { DESIGNATIONS, WEEKDAYS } from "@/lib/hms";
-import type { Department, Doctor, Gender, LatLng, Paginated, Weekday } from "@/lib/types";
+import { DESIGNATIONS } from "@/lib/hms";
+import type { Department, Doctor, Gender, LatLng, Paginated, StaffMember } from "@/lib/types";
 
 interface FormState {
   first_name: string;
@@ -24,9 +26,8 @@ interface FormState {
   longitude: string;
   experience_years: string;
   consultation_fee: string;
-  available_days: Weekday[];
-  shift_start: string;
-  shift_end: string;
+  week: WeekState;
+  user: string;
   joined_on: string;
   bio: string;
   is_active: boolean;
@@ -49,9 +50,8 @@ function initialState(d: Doctor | null, location?: LatLng): FormState {
     longitude: d?.longitude ?? (location ? location.lng.toFixed(6) : ""),
     experience_years: d ? String(d.experience_years) : "",
     consultation_fee: d ? String(Number(d.consultation_fee)) : "",
-    available_days: d?.available_days ?? ["sat", "sun", "mon", "tue", "wed", "thu"],
-    shift_start: d?.shift_start?.slice(0, 5) ?? "09:00",
-    shift_end: d?.shift_end?.slice(0, 5) ?? "14:00",
+    week: weekFromSchedules(d?.schedules, d ? { days: d.available_days, start: d.shift_start, end: d.shift_end } : undefined),
+    user: d?.user ? String(d.user) : "",
     joined_on: d?.joined_on ?? "",
     bio: d?.bio ?? "",
     is_active: d?.is_active ?? true,
@@ -77,10 +77,12 @@ export function DoctorFormModal({
   const isEdit = doctor !== null;
   const [form, setForm] = useState<FormState>(() => initialState(doctor, location));
   const [departments, setDepartments] = useState<Department[]>([]);
+  const [accounts, setAccounts] = useState<StaffMember[]>([]);
+  const { can } = useAuth();
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
   const set = <K extends keyof FormState>(key: K, value: FormState[K]) => setForm((f) => ({ ...f, [key]: value }));
-  const text = (key: "first_name" | "last_name" | "email" | "phone" | "designation" | "specialization" | "qualification" | "registration_no" | "chamber" | "experience_years" | "consultation_fee" | "shift_start" | "shift_end" | "joined_on" | "bio") => ({
+  const text = (key: "first_name" | "last_name" | "email" | "phone" | "designation" | "specialization" | "qualification" | "registration_no" | "chamber" | "experience_years" | "consultation_fee" | "joined_on" | "bio") => ({
     value: form[key],
     onChange: (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => set(key, e.target.value),
   });
@@ -89,26 +91,30 @@ export function DoctorFormModal({
     api<Paginated<Department>>(`/departments/${buildQuery({ page_size: 100 })}`)
       .then((res) => setDepartments(res.results))
       .catch((err) => setError(errorMessage(err)));
-  }, []);
-
-  function toggleDay(day: Weekday) {
-    set("available_days", form.available_days.includes(day) ? form.available_days.filter((d) => d !== day) : [...form.available_days, day]);
-  }
+    // Staff accounts with the Doctor role, to link this doctor's login.
+    if (can("staff.view")) {
+      api<Paginated<StaffMember>>(`/staff/${buildQuery({ role__code: "doctor", page_size: 100, is_active: true })}`)
+        .then((res) => setAccounts(res.results))
+        .catch(() => {});
+    }
+  }, [can]);
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     setSaving(true);
     setError("");
-    const body = {
-      ...form,
+    const { week, ...rest } = form;
+    const body: Record<string, unknown> = {
+      ...rest,
       department: form.department ? Number(form.department) : null,
       experience_years: Number(form.experience_years || 0),
       consultation_fee: form.consultation_fee || "0",
-      shift_start: form.shift_start || null,
-      shift_end: form.shift_end || null,
+      schedules: schedulesFromWeek(week),
+      user: form.user ? Number(form.user) : null,
       joined_on: form.joined_on || null,
       ...coordinateBody(form.latitude, form.longitude),
     };
+    if (!can("staff.view")) delete body.user;
     try {
       const saved = isEdit
         ? await api<Doctor>(`/doctors/${doctor.id}/`, { method: "PATCH", body })
@@ -122,7 +128,7 @@ export function DoctorFormModal({
   }
 
   return (
-    <Modal open title={isEdit ? `Edit Dr. ${doctor.full_name}` : "Add doctor"} onClose={onClose} width="max-w-2xl">
+    <Modal open title={isEdit ? `Edit Dr. ${doctor.full_name}` : "Add doctor"} onClose={onClose} width="max-w-3xl">
       <form onSubmit={handleSubmit} className="space-y-4">
         {error && <Alert>{error}</Alert>}
         <Section>Profile</Section>
@@ -189,42 +195,31 @@ export function DoctorFormModal({
           onChange={(lat, lng) => setForm((f) => ({ ...f, latitude: lat, longitude: lng }))}
         />
 
-        <Section>Schedule &amp; fee</Section>
-        <div>
-          <span className="mb-1.5 block text-sm font-medium">Working days</span>
-          <div className="flex flex-wrap gap-2">
-            {WEEKDAYS.map((d) => {
-              const on = form.available_days.includes(d.value);
-              return (
-                <button
-                  key={d.value}
-                  type="button"
-                  onClick={() => toggleDay(d.value)}
-                  aria-pressed={on}
-                  className={`rounded-lg border px-3 py-1.5 text-sm font-semibold transition-colors ${
-                    on ? "border-primary bg-primary text-white" : "border-border bg-surface text-muted hover:text-foreground"
-                  }`}
-                >
-                  {d.label}
-                </button>
-              );
-            })}
-          </div>
-          <p className="mt-1.5 text-xs text-muted">No days selected means the doctor can be booked any day.</p>
-        </div>
+        <Section>Weekly schedule</Section>
+        <ScheduleEditor value={form.week} onChange={(week) => set("week", week)} />
+        <p className="-mt-2 text-xs text-muted">Patients can only be booked inside these hours. Leave (holidays, conferences) is added on the doctor’s profile.</p>
+
+        <Section>Fee &amp; account</Section>
         <div className="grid gap-4 sm:grid-cols-3">
-          <Field label="Shift starts">
-            <Input {...text("shift_start")} type="time" />
-          </Field>
-          <Field label="Shift ends">
-            <Input {...text("shift_end")} type="time" />
-          </Field>
           <Field label="Consultation fee">
             <Input {...text("consultation_fee")} type="number" min={0} step="1" />
           </Field>
           <Field label="Joined on">
             <Input {...text("joined_on")} type="date" />
           </Field>
+          {can("staff.view") && (
+            <Field label="Login account">
+              <Select value={form.user} onChange={(e) => set("user", e.target.value)}>
+                <option value="">Not linked</option>
+                {accounts.map((a) => (
+                  <option key={a.id} value={a.id}>
+                    {a.full_name || a.email}
+                  </option>
+                ))}
+                {doctor?.user && !accounts.some((a) => a.id === doctor.user) && <option value={doctor.user}>{doctor.user_email}</option>}
+              </Select>
+            </Field>
+          )}
         </div>
         <Field label="Short bio">
           <Textarea {...text("bio")} rows={2} />

@@ -327,3 +327,25 @@ a {
 .trip-dot--dest {
   background: #e5484d;
 }
+
+/* Printing (discharge summaries, invoices): only the page content, no app chrome. */
+@media print {
+  aside,
+  header,
+  .no-print {
+    display: none !important;
+  }
+  body {
+    background: #fff;
+  }
+  main {
+    padding: 0 !important;
+  }
+  .lg\:pl-\[var\(--sidebar-width\)\] {
+    padding-left: 0 !important;
+  }
+  .print-card {
+    border: 0 !important;
+    box-shadow: none !important;
+  }
+}
